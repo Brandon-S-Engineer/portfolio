@@ -1,202 +1,151 @@
+import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowDown, ArrowUpRight, Check, Code2, FileText, Mail, MessageCircle, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, Code2, FileText, Mail, MessageCircle, UserRound } from 'lucide-react'
 import ResaleIntel from '@/components/site/resale/resale-intel'
 import { getMarketSnapshot } from '@/lib/resale/market'
 import CompanyAgentDemo from '@/components/site/company-agent-demo'
 import LeadAgentDemo from '@/components/site/lead-agent-demo'
-import OtherServices from '@/components/site/other-services'
+import LevelLadder from '@/components/site/hiring/level-ladder'
+import LevelSection from '@/components/site/hiring/level-section'
+import BuildDetails from '@/components/site/hiring/build-details'
+import { hiringCopy } from '@/content/hiring'
 import { site } from '@/content/site'
 
-// Home de una sola vista, pensado para quien contrata: hero → proyectos en vivo
-// → cómo construyo → más trabajo → contacto. Los proyectos se prueban aquí
-// mismo, sin salir de la página.
+// Home de empleo. Se lee en dos capas: la escalera (qué hace cada nivel, en
+// lenguaje llano) para quien no es técnico, y "How it's built" en cada nivel
+// para quien revisa decisiones y código. Todo lo que se prueba aquí es real.
 
-const stack = ['Python', 'FastAPI', 'Next.js', 'TypeScript', 'Postgres', 'pgvector', 'OpenAI', 'Claude', 'LangGraph', 'MCP']
-
-const principles = [
-  {
-    title: 'Grounded or silent',
-    body: 'Answers come from retrieved sources or tool results, cited inline. When nothing relevant comes back, the agent says so instead of guessing.',
-  },
-  {
-    title: 'The model never writes SQL',
-    body: 'Agents call typed, parameterized, read-only tools with validated arguments. Data access is scoped by design, not by prompt.',
-  },
-  {
-    title: 'Humans approve side effects',
-    body: 'Anything that changes the outside world — refunds, CRM updates, emails — goes through an explicit approval step.',
-  },
-  {
-    title: 'Observable by default',
-    body: 'Every step is traced: tool calls, queries, sources, tokens, cost and latency. You can see why an answer happened.',
-  },
-]
-
-const upcoming = [
-  {
-    num: '2/2',
-    title: 'Cross-border product sourcing',
-    body: 'Matches the same product across supplier and US marketplaces with image + text embeddings, then computes landed cost, fees and real margin to find what is worth selling.',
-  },
-]
+const DEMOS: Record<string, ReactNode> = {
+  'level-3': <CompanyAgentDemo />,
+  'level-4': <LeadAgentDemo />,
+}
 
 // Los datos del mercado de reventa se cachean 30 min (ver lib/resale/market).
 export const revalidate = 1800
 
 export default async function HomePage() {
+  const copy = hiringCopy.en
   const snapshot = await getMarketSnapshot()
-  const { hiring } = site
+  const { links: l } = site.hiring
   const links = [
-    { href: hiring.links.github, label: 'GitHub', icon: Code2 },
-    { href: hiring.links.linkedin, label: 'LinkedIn', icon: UserRound },
-    { href: hiring.links.cv, label: 'CV (PDF)', icon: FileText },
-    { href: hiring.links.email ? `mailto:${hiring.links.email}` : '', label: 'Email', icon: Mail },
-    { href: hiring.links.whatsapp ? `https://wa.me/${hiring.links.whatsapp}` : '', label: 'WhatsApp', icon: MessageCircle },
-  ].filter((l) => l.href)
+    { href: l.github, label: 'GitHub', icon: Code2 },
+    { href: l.linkedin, label: 'LinkedIn', icon: UserRound },
+    { href: l.cv, label: 'CV (PDF)', icon: FileText },
+    { href: l.email ? `mailto:${l.email}` : '', label: 'Email', icon: Mail },
+    { href: l.whatsapp ? `https://wa.me/${l.whatsapp}` : '', label: 'WhatsApp', icon: MessageCircle },
+  ].filter((x) => x.href)
+
+  const liveCount = copy.levels.filter((x) => x.status === 'live').length + 1
+  const built = copy.levels.filter((x) => x.status === 'building')
+  const live = copy.levels.filter((x) => x.status === 'live')
+  const p = copy.production
 
   return (
     <>
-      {/* HERO */}
-      <section className='mx-auto max-w-[1120px] px-6 pt-16 pb-12 sm:pt-24'>
-        <div className='site-rise max-w-[760px]'>
-          <span
-            className='inline-flex items-center gap-2.5 rounded-full py-1.5 pr-3 pl-2.5 text-[12.5px]'
-            style={{ border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--muted)' }}>
-            <span className='site-pulse h-[7px] w-[7px] rounded-full' style={{ background: 'var(--live)' }} />
-            {hiring.availability}
-          </span>
-          <p className='site-mono mt-6 text-[13px]' style={{ color: 'var(--muted)' }}>
-            {site.name} · Applied AI Engineer
-          </p>
-          <h1
-            className='site-display mt-3 font-bold'
-            style={{ fontSize: 'clamp(36px,5vw,58px)', lineHeight: 1.04, letterSpacing: '-0.035em', textWrap: 'balance' }}>
-            {hiring.headline}
-          </h1>
-          <p
-            className='mt-5 max-w-[58ch] text-[17.5px]'
-            style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
-            {hiring.subhead}
-          </p>
-          <div className='mt-7 flex flex-wrap gap-3'>
-            <a href='#projects' className='site-btn site-btn-accent h-12 px-[22px] text-[15.5px]'>
-              Try the live projects
-              <ArrowDown className='h-[17px] w-[17px]' />
-            </a>
-            {links.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                target={l.href.startsWith('mailto:') ? undefined : '_blank'}
-                rel='noreferrer'
-                className='site-btn site-btn-outline h-12 px-[18px] text-[15px]'>
-                <l.icon className='h-4 w-4' />
-                {l.label}
+      {/* HERO: quién soy + la escalera completa en una vista */}
+      <section className='mx-auto max-w-[1120px] px-6 pt-14 pb-8 sm:pt-20'>
+        <div className='grid items-end gap-12 lg:grid-cols-[1.05fr_0.95fr]'>
+          <div className='site-rise'>
+            <span
+              className='inline-flex items-center gap-2.5 rounded-full py-1.5 pr-3 pl-2.5 text-[12.5px]'
+              style={{ border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--muted)' }}>
+              <span className='site-pulse h-[7px] w-[7px] rounded-full' style={{ background: 'var(--live)' }} />
+              {copy.availability}
+            </span>
+            <p className='site-mono mt-6 text-[13px]' style={{ color: 'var(--muted)' }}>
+              {site.name} · {copy.role}
+            </p>
+            <h1
+              className='site-display mt-3 font-bold'
+              style={{ fontSize: 'clamp(34px,4.6vw,54px)', lineHeight: 1.05, letterSpacing: '-0.035em', textWrap: 'balance' }}>
+              {copy.headline}
+            </h1>
+            <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
+              {copy.subhead}
+            </p>
+            <div className='mt-7 flex flex-wrap gap-3'>
+              <a href='#levels' className='site-btn site-btn-accent h-12 px-[22px] text-[15.5px]'>
+                {copy.cta}
+                <ArrowDown className='h-[17px] w-[17px]' />
               </a>
-            ))}
+              {links.map((x) => (
+                <a
+                  key={x.label}
+                  href={x.href}
+                  target={x.href.startsWith('mailto:') ? undefined : '_blank'}
+                  rel='noreferrer'
+                  className='site-btn site-btn-outline h-12 px-[16px] text-[14.5px]'>
+                  <x.icon className='h-4 w-4' />
+                  {x.label}
+                </a>
+              ))}
+            </div>
+            <div className='mt-6 flex flex-wrap gap-x-5 gap-y-2'>
+              {[...copy.meta, copy.proof.code].map((m) => (
+                <span key={m} className='inline-flex items-center gap-1.5 text-[13.5px]' style={{ color: 'var(--muted)' }}>
+                  <Check className='h-3.5 w-3.5' style={{ color: 'var(--live)' }} strokeWidth={2.8} />
+                  {m}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className='mt-6 flex flex-wrap gap-x-5 gap-y-2'>
-            {hiring.meta.map((m) => (
-              <span key={m} className='inline-flex items-center gap-1.5 text-[13.5px]' style={{ color: 'var(--muted)' }}>
-                <Check className='h-3.5 w-3.5' style={{ color: 'var(--live)' }} strokeWidth={2.8} />
-                {m}
-              </span>
-            ))}
-          </div>
-          <div className='mt-8 flex flex-wrap gap-2'>
-            {stack.map((s) => (
-              <span
-                key={s}
-                className='site-mono rounded-full px-3 py-1 text-[12.5px]'
-                style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>
-                {s}
-              </span>
-            ))}
-          </div>
+          <LevelLadder copy={copy} />
+        </div>
+
+        {/* PROOF STRIP */}
+        <div className='mt-12 grid grid-cols-3 gap-2 sm:gap-3'>
+          {[
+            [String(liveCount), copy.proof.live],
+            [snapshot ? `${(Math.floor(snapshot.totals.tracked / 1000) * 1000).toLocaleString('en-US')}+` : '—', copy.proof.listings],
+            ['4', copy.proof.levels],
+          ].map(([v, k]) => (
+            <div key={k} className='rounded-[14px] px-3 py-3 sm:px-4' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <p className='site-display text-[20px] font-bold sm:text-[26px]' style={{ letterSpacing: '-0.03em' }}>
+                {v}
+              </p>
+              <p className='text-[11.5px] leading-snug sm:text-[13px]' style={{ color: 'var(--muted)' }}>
+                {k}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* PROJECT 01 */}
-      <section id='projects' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-10'>
-        <div className='flex flex-wrap items-end justify-between gap-4'>
-          <div className='max-w-[62ch]'>
-            <span className='site-kicker'>Demo 01 · live</span>
-            <h2
-              className='site-display mt-2 font-bold'
-              style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
-              Company data agent — RAG + SQL with a visible trace
-            </h2>
-            <p className='mt-2 text-[15.5px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-              One tool-calling agent over two kinds of company data: policy documents embedded in pgvector, and
-              inventory and orders in Postgres. Order lookups require the matching email, every policy fact is cited,
-              and the right-hand panel shows exactly how each answer was produced.
-            </p>
-          </div>
-          <div className='site-mono flex flex-wrap gap-2 text-[12px]' style={{ color: 'var(--muted)' }}>
-            {['OpenAI tool calling', 'pgvector', 'Postgres', 'Next.js route handler', 'zod'].map((t) => (
-              <span key={t} className='rounded-full px-2.5 py-0.5' style={{ border: '1px solid var(--border)' }}>
-                {t}
-              </span>
+      {/* LEVELS */}
+      <section id='levels' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-16'>
+        <div className='max-w-[64ch]'>
+          <span className='site-kicker'>{copy.levelsIntro.kicker}</span>
+          <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
+            {copy.levelsIntro.title}
+          </h2>
+          <p className='mt-2 text-[15.5px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
+            {copy.levelsIntro.body}
+          </p>
+        </div>
+        {built.length > 0 && (
+          <div className='mt-6 grid grid-cols-1 gap-4 md:grid-cols-2'>
+            {built.map((lv) => (
+              <LevelSection key={lv.id} copy={copy} level={lv} />
             ))}
           </div>
-        </div>
-        <div className='mt-6'>
-          <CompanyAgentDemo />
-        </div>
+        )}
+        {live.map((lv) => (
+          <LevelSection key={lv.id} copy={copy} level={lv}>
+            {DEMOS[lv.id]}
+          </LevelSection>
+        ))}
       </section>
 
-      {/* PROJECT 02 */}
-      <section className='mx-auto max-w-[1120px] px-6 pt-20'>
-        <div className='flex flex-wrap items-end justify-between gap-4'>
-          <div className='max-w-[62ch]'>
-            <span className='site-kicker'>Demo 02 · live</span>
-            <h2
-              className='site-display mt-2 font-bold'
-              style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
-              Lead agent on a CRM — LangGraph, MCP and human approval
-            </h2>
-            <p className='mt-2 text-[15.5px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-              A Python service: a LangGraph state machine qualifies an inbound lead, reads the CRM and inventory through
-              its own MCP server, drafts the reply and proposes CRM writes. The graph then pauses — state checkpointed
-              in Postgres — until a human approves, edits or rejects. Only approved actions run.
-            </p>
-          </div>
-          <div className='site-mono flex flex-wrap gap-2 text-[12px]' style={{ color: 'var(--muted)' }}>
-            {['Python', 'FastAPI', 'LangGraph', 'MCP server', 'Postgres checkpointer', 'Render'].map((t) => (
-              <span key={t} className='rounded-full px-2.5 py-0.5' style={{ border: '1px solid var(--border)' }}>
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className='mt-6'>
-          <LeadAgentDemo />
-        </div>
-      </section>
-
-      {/* PRODUCTS: páginas completas embebidas, no links externos */}
-      <section id='products' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-24'>
-        <div className='flex flex-wrap items-end justify-between gap-4'>
-          <div className='max-w-[64ch]'>
-            <span className='site-kicker'>Product 1/2 · real data, used daily</span>
-            <h2
-              className='site-display mt-2 font-bold'
-              style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
-              Resale Intelligence — a price model and multi-agent deal desk on 16k real listings
-            </h2>
-          </div>
-          <div className='site-mono flex flex-wrap gap-2 text-[12px]' style={{ color: 'var(--muted)' }}>
-            {['Chrome extension', 'Postgres', 'Multi-agent', 'Structured outputs', 'Next.js'].map((t) => (
-              <span key={t} className='rounded-full px-2.5 py-0.5' style={{ border: '1px solid var(--border)' }}>
-                {t}
-              </span>
-            ))}
-          </div>
+      {/* IN PRODUCTION: el sistema real, embebido */}
+      <section id='production' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-24'>
+        <div className='max-w-[68ch]'>
+          <span className='site-kicker'>{p.kicker}</span>
+          <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
+            {p.title}
+          </h2>
         </div>
         <div className='mt-6 overflow-hidden rounded-[20px]' style={{ border: '1px solid var(--border)', background: 'var(--bg)' }}>
-          <div
-            className='flex items-center gap-3 px-4 py-2.5'
-            style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
+          <div className='flex items-center gap-3 px-4 py-2.5' style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
             <span className='flex gap-1.5'>
               {[0, 1, 2].map((i) => (
                 <span key={i} className='h-[10px] w-[10px] rounded-full' style={{ background: 'var(--border)' }} />
@@ -215,56 +164,71 @@ export default async function HomePage() {
             <ResaleIntel snapshot={snapshot} />
           </div>
         </div>
+        <BuildDetails copy={copy} decisions={p.decisions} stack={p.stack} code={p.code} />
+        <p className='site-mono mt-4 text-[12px]' style={{ color: 'var(--muted)' }}>
+          {p.next}
+        </p>
       </section>
 
-      {/* NEXT PRODUCT */}
-      <section className='mx-auto max-w-[1120px] px-6 pt-8'>
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          {upcoming.map((p) => (
-            <div
-              key={p.num}
-              className='rounded-[18px] p-[22px]'
-              style={{ background: 'var(--card)', border: '1px dashed var(--border)' }}>
-              <span className='site-kicker'>Product {p.num} · in progress</span>
-              <h3 className='site-display mt-2 text-[19px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
-                {p.title}
-              </h3>
-              <p className='mt-2 text-[14.5px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-                {p.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* HOW I BUILD */}
+      {/* HOW I BUILD: cada principio apunta a donde se ve */}
       <section id='how' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-20'>
-        <span className='site-kicker'>How I build</span>
-        <h2
-          className='site-display mt-2 font-bold'
-          style={{ fontSize: 'clamp(24px,3vw,30px)', letterSpacing: '-0.03em' }}>
-          Production habits, visible in every project.
+        <span className='site-kicker'>{copy.principles.kicker}</span>
+        <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,30px)', letterSpacing: '-0.03em' }}>
+          {copy.principles.title}
         </h2>
-        <div className='mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-          {principles.map((p) => (
-            <div
-              key={p.title}
-              className='rounded-[18px] p-[20px]'
+        <div className='mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+          {copy.principles.items.map((x) => (
+            <a
+              key={x.title}
+              href={x.href}
+              className='site-lift flex flex-col rounded-[18px] p-[20px]'
               style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
               <h3 className='site-display text-[16.5px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
-                {p.title}
+                {x.title}
               </h3>
-              <p className='mt-2 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-                {p.body}
+              <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
+                {x.body}
               </p>
-            </div>
+              <span className='mt-3 inline-flex items-center gap-1 text-[13px] font-semibold'>
+                {copy.principles.see}
+                <ArrowRight className='h-3.5 w-3.5' style={{ color: 'var(--accent)' }} />
+              </span>
+            </a>
           ))}
         </div>
       </section>
 
-      {/* MORE WORK */}
+      {/* FULL-STACK FOUNDATIONS */}
       <section className='mx-auto max-w-[1120px] px-6 pt-20'>
-        <OtherServices />
+        <span className='site-kicker'>{copy.foundations.kicker}</span>
+        <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,30px)', letterSpacing: '-0.03em' }}>
+          {copy.foundations.title}
+        </h2>
+        <p className='mt-2 max-w-[64ch] text-[15px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
+          {copy.foundations.body}
+        </p>
+        <div className='mt-6 grid grid-cols-1 gap-4 md:grid-cols-3'>
+          {copy.foundations.items.map((x) => (
+            <a
+              key={x.name}
+              href={x.href}
+              target={x.href.startsWith('http') ? '_blank' : undefined}
+              rel='noreferrer'
+              className='site-lift flex flex-col rounded-[18px] p-[22px]'
+              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <h3 className='site-display text-[18px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
+                {x.name}
+              </h3>
+              <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
+                {x.body}
+              </p>
+              <span className='mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold'>
+                {copy.foundations.open}
+                <ArrowUpRight className='h-3.5 w-3.5' style={{ color: 'var(--accent)' }} />
+              </span>
+            </a>
+          ))}
+        </div>
       </section>
 
       {/* CONTACT */}
@@ -280,31 +244,24 @@ export default async function HomePage() {
             <h2
               className='site-display font-bold'
               style={{ fontSize: 'clamp(28px,4vw,42px)', letterSpacing: '-0.03em', textWrap: 'balance' }}>
-              Building something with LLMs? Let&apos;s talk.
+              {copy.contact.title}
             </h2>
             <p className='mx-auto mt-4 max-w-[52ch] text-[16.5px]' style={{ lineHeight: 1.55, opacity: 0.72 }}>
-              {hiring.availability}. Also available for fixed-scope builds.
+              {copy.availability}. {copy.contact.body}
             </p>
             <div className='mt-8 flex flex-wrap justify-center gap-3'>
-              {links.length ? (
-                links.map((l) => (
-                  <a
-                    key={l.label}
-                    href={l.href}
-                    target={l.href.startsWith('mailto:') ? undefined : '_blank'}
-                    rel='noreferrer'
-                    className='site-btn h-[50px] px-[22px] text-[15px]'
-                    style={{ background: 'transparent', color: 'var(--bg)', border: '1px solid color-mix(in oklch, var(--bg) 40%, transparent)' }}>
-                    <l.icon className='h-4 w-4' />
-                    {l.label}
-                  </a>
-                ))
-              ) : (
-                <Link href='/services' className='site-btn site-btn-accent h-[50px] px-[26px] text-[15.5px]'>
-                  See services
-                  <ArrowUpRight className='h-[17px] w-[17px]' />
-                </Link>
-              )}
+              {links.map((x) => (
+                <a
+                  key={x.label}
+                  href={x.href}
+                  target={x.href.startsWith('mailto:') ? undefined : '_blank'}
+                  rel='noreferrer'
+                  className='site-btn h-[50px] px-[22px] text-[15px]'
+                  style={{ background: 'transparent', color: 'var(--bg)', border: '1px solid color-mix(in oklch, var(--bg) 40%, transparent)' }}>
+                  <x.icon className='h-4 w-4' />
+                  {x.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>

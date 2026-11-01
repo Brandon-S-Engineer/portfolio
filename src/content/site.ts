@@ -15,13 +15,8 @@ export const site = {
     'From simple automations to multi-agent systems — fixed scope, fixed timeline, and a live demo of every level you can try right here.',
   location: 'Remote · Available worldwide',
   // Home orientado a contratación: quien evalúa debe poder contactarte en un
-  // clic. Los vacíos no se muestran.
+  // clic. Los vacíos no se muestran. El copy del home vive en content/hiring.
   hiring: {
-    headline: 'I build AI agents and LLM features that run in production.',
-    subhead:
-      'Applied AI engineer — RAG, tool-calling agents, MCP and voice, on a full-stack base of Next.js, Python and Postgres. Every project below is live: try it, then read how it was built.',
-    availability: 'Open to full-time remote or on-site in CDMX',
-    meta: ['Cuajimalpa, Mexico City · GMT-6', 'English C1'],
     links: {
       github: 'https://github.com/Brandon-S-Engineer',
       linkedin: 'https://www.linkedin.com/in/brandon-i-soria/',

@@ -21,9 +21,9 @@ export default function SiteFooter() {
           className='flex flex-wrap items-center gap-x-[22px] gap-y-2 text-[13.5px]'
           style={{ color: 'var(--muted)' }}>
           <Link
-            href='/services'
+            href='/agency'
             className='transition-colors hover:text-[var(--fg)]'>
-            Services
+            For clients
           </Link>
           <Link
             href='/mvp-saas'
