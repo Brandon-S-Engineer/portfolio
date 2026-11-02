@@ -1,5 +1,8 @@
-# El free tier de Render duerme el servicio tras 15 min sin tráfico. Un ping
-# cada 10 min lo mantiene despierto (750 h gratis/mes alcanzan para 24/7).
+# El free tier de Render duerme el servicio tras 15 min sin tráfico. Solo es
+# respaldo: GitHub retrasa los crons frecuentes (en la práctica corre cada
+# 4–7 h). El ping real es un monitor externo cada 5 min (UptimeRobot); 750 h
+# gratis/mes alcanzan para 24/7. El servicio cierra sus conexiones a Postgres
+# tras 60 s sin uso, así que estar despierto no mantiene despierto a Neon.
 name: keep-lead-agent-warm
 on:
   schedule:

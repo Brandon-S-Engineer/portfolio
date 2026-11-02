@@ -25,6 +25,7 @@ from langgraph.types import Command
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, Field
 
 from lead_agent.config import settings
@@ -73,7 +74,21 @@ async def lifespan(_: FastAPI):
             if t.name in WRITE_TOOLS
         )
 
-        checkpointer = await stack.enter_async_context(AsyncPostgresSaver.from_conn_string(_ckpt_url()))
+        # Pool que baja a 0 conexiones tras 60 s sin uso: con una conexión
+        # siempre abierta, Neon nunca se suspende mientras el servicio esté
+        # despierto (y el ping lo mantiene despierto 24/7).
+        pool = AsyncConnectionPool(
+            _ckpt_url(),
+            min_size=0,
+            max_size=4,
+            max_idle=60,
+            open=False,
+            kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        )
+        await pool.open()
+        stack.push_async_callback(pool.close)
+        STATE["pool"] = pool
+        checkpointer = AsyncPostgresSaver(pool)
         await checkpointer.setup()
 
         STATE["graph"] = build_graph(session, write_specs, settings.model, checkpointer)
