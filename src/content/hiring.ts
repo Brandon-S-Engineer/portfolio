@@ -3,18 +3,18 @@
 // (pipeline, decisiones con su trade-off, qué falla y cómo se maneja) para
 // quien revisa el código.
 //
-// La escalera sube por cuánto se le confía a la IA, toda sobre la misma tienda
-// ficticia (Volt Mobile). Regla: lo que se muestra aquí pega a un backend real;
-// un nivel sin backend todavía se marca 'building', nunca se simula.
+// Destacados: tres sistemas que suben en responsabilidad — un agente que
+// responde, uno que actúa (con aprobación humana) y el sistema real de mi
+// negocio. Debajo, funcionalidades más chicas. Regla: todo lo que se muestra
+// pega a un backend real; nada se simula.
 
 const REPO = 'https://github.com/Brandon-S-Engineer/portfolio/tree/main'
 
 export type Decision = { choice: string; why: string; tradeoff: string }
 
 export type Level = {
-  tier: 1 | 2 | 3 | 4
+  step: 1 | 2
   id: string
-  status: 'live' | 'building'
   verb: string
   name: string
   // Una frase, sin jerga: qué hace para el negocio.
@@ -29,47 +29,8 @@ export type Level = {
 
 const levels: Level[] = [
   {
-    tier: 1,
-    id: 'level-1',
-    status: 'building',
-    verb: 'Automate',
-    name: 'Move data between tools',
-    plain: 'A new customer form lands in the CRM and the team is notified — no copying by hand, and nothing lost if a step fails.',
-    useWhen: 'the rule is fixed and someone copies the same data between tools every day.',
-    pipeline: [],
-    decisions: [
-      {
-        choice: 'n8n, not code',
-        why: 'This is plumbing between existing systems. n8n has the connectors, and the client can read and edit the workflow.',
-        tradeoff: 'Complex logic gets fragile in visual nodes — that work moves to Python at the next levels.',
-      },
-    ],
-    failures: [],
-    stack: ['n8n', 'Docker Compose', 'Postgres', 'Webhooks'],
-  },
-  {
-    tier: 2,
-    id: 'level-2',
-    status: 'building',
-    verb: 'Decide',
-    name: 'AI sorts every message',
-    plain: 'AI reads each incoming message, labels it and sends it to the right person. When it is unsure, a human decides.',
-    useWhen: 'people spend hours reading things just to decide what happens next.',
-    pipeline: [],
-    decisions: [
-      {
-        choice: 'Typed output with a confidence threshold',
-        why: 'Pydantic AI returns a validated object, never loose text. Low confidence goes to a human queue.',
-        tradeoff: 'Some messages a model could have handled still reach a person — cheaper than a wrong route.',
-      },
-    ],
-    failures: [],
-    stack: ['Python', 'Pydantic AI', 'FastAPI', 'Evals'],
-  },
-  {
-    tier: 3,
-    id: 'level-3',
-    status: 'live',
+    step: 1,
+    id: 'answer',
     verb: 'Answer',
     name: 'Answer from company data',
     plain:
@@ -86,7 +47,7 @@ const levels: Level[] = [
       {
         choice: 'No agent framework',
         why: 'Three tools and one loop. A plain Next.js route handler streams the answer and the full trace with nothing hidden.',
-        tradeoff: 'Retries and memory are written by hand. A framework earns its place once there is long-lived state — see Level 4.',
+        tradeoff: 'Retries and memory are written by hand. A framework earns its place once there is long-lived state — see the next system.',
       },
       {
         choice: 'Two kinds of search, one agent',
@@ -108,9 +69,8 @@ const levels: Level[] = [
     code: `${REPO}/src/lib/agent-demo`,
   },
   {
-    tier: 4,
-    id: 'level-4',
-    status: 'live',
+    step: 2,
+    id: 'act',
     verb: 'Act',
     name: 'Act on the CRM, with approval',
     plain:
@@ -127,7 +87,7 @@ const levels: Level[] = [
       {
         choice: 'LangGraph for this one',
         why: 'The run must pause for minutes or hours and resume exactly where it stopped. interrupt() plus a Postgres checkpointer does that.',
-        tradeoff: 'More moving parts than Level 3 — only worth it for long-lived, stateful flows.',
+        tradeoff: 'More moving parts than the first system — only worth it for long-lived, stateful flows.',
       },
       {
         choice: 'Its own MCP server is the only door to the CRM',
@@ -151,33 +111,36 @@ const levels: Level[] = [
   },
 ]
 
+// Funcionalidades más chicas pero reales (voz, clasificación con evals,
+// automatización). La sección no se muestra mientras esté vacía.
+export type SmallBuild = { name: string; plain: string; stack: string[]; href: string }
+const smallBuilds: SmallBuild[] = []
+
 const en = {
   role: 'Full-stack & AI Engineer',
   headline: 'I build software where AI does real work — and stays under control.',
   subhead:
-    'From simple automations to agents that act on a CRM with a human approving. Every system below is live: try it, then open “How it’s built” to see the decisions behind it.',
+    'An agent that answers from company data, one that acts on a CRM with a human approving, and the system I run my own business on. All three are live: try them, then open “How it’s built” to see the decisions behind each one.',
   availability: 'Open to full-time remote or on-site in CDMX',
   meta: ['Cuajimalpa, Mexico City · GMT-6', 'English C1'],
   proof: {
     live: 'live systems you can try',
     listings: 'real listings in my production system',
-    code: 'All code public on GitHub',
-    levels: 'levels of AI autonomy, one store',
+    public: 'Public',
+    publicLabel: 'source code on GitHub',
   },
   ladder: {
-    kicker: 'Four levels of trust in AI',
-    hint: 'Click a level to jump to it',
-    building: 'building',
+    kicker: 'More responsibility at every step',
+    hint: 'Click a step to jump to it',
     production: 'In production',
-    productionName: 'Resale Intelligence — my own business, real data',
+    productionName: 'Run a real business on it',
   },
   levelsIntro: {
-    kicker: 'The levels',
-    title: 'Same store, more trust at every level.',
-    body: 'Each level gives the AI more responsibility for Volt Mobile, a fictional refurbished-phone store. Higher is not “better” — the skill is picking the lowest level that solves the problem.',
+    kicker: 'Featured systems',
+    title: 'From answering, to acting, to running in production.',
+    body: 'The first two run for Volt Mobile, a fictional refurbished-phone store: one answers its customers, the next acts on its CRM with a human approving. The third is my own business. More responsibility is not “better” — the skill is giving the AI only as much as the problem needs.',
   },
   section: {
-    level: 'Level',
     useWhen: 'Use this when',
     howBuilt: 'How it’s built',
     howBuiltHint: 'architecture, decisions and trade-offs',
@@ -186,11 +149,10 @@ const en = {
     tradeoff: 'Trade-off',
     failures: 'What can fail, and how it’s handled',
     code: 'View the code',
-    building: 'In progress — this level goes live with a real backend, not a mock.',
   },
   levels,
   production: {
-    kicker: 'In production · used daily',
+    kicker: '03 · In production · used daily',
     title: 'Resale Intelligence — a price model and multi-agent deal desk on real listings',
     decisions: [
       {
@@ -218,29 +180,29 @@ const en = {
     title: 'Production habits, and where to see each one.',
     items: [
       {
-        title: 'Simplest level that works',
-        body: 'Not every problem needs an agent. Automation first, AI only where judgment is needed.',
-        href: '#levels',
+        title: 'Simplest thing that works',
+        body: 'Not every problem needs an agent or a framework. Plain code first, AI only where judgment is needed.',
+        href: '#answer',
       },
       {
         title: 'Grounded or silent',
         body: 'Answers come from retrieved sources or tool results, cited. When nothing relevant comes back, the agent says so.',
-        href: '#level-3',
+        href: '#answer',
       },
       {
         title: 'The model never writes SQL',
         body: 'Typed, parameterized tools with validated arguments. Data access is scoped by design, not by prompt.',
-        href: '#level-3',
+        href: '#answer',
       },
       {
         title: 'Humans approve side effects',
         body: 'Anything that changes the outside world goes through an explicit approval step.',
-        href: '#level-4',
+        href: '#act',
       },
       {
         title: 'Observable by default',
         body: 'Every step is traced: tool calls, queries, sources, tokens, cost and latency.',
-        href: '#level-3',
+        href: '#answer',
       },
       {
         title: 'Numbers come from code',
@@ -249,6 +211,11 @@ const en = {
       },
     ],
     see: 'See it',
+  },
+  smallBuilds: {
+    kicker: 'Smaller builds',
+    title: 'Focused features, each one real.',
+    items: smallBuilds,
   },
   foundations: {
     kicker: 'Beyond AI',

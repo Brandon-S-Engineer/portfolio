@@ -8,6 +8,7 @@ import LeadAgentDemo from '@/components/site/lead-agent-demo'
 import LevelLadder from '@/components/site/hiring/level-ladder'
 import LevelSection from '@/components/site/hiring/level-section'
 import BuildDetails from '@/components/site/hiring/build-details'
+import { LevelBars } from '@/components/site/demo-stage'
 import { hiringCopy } from '@/content/hiring'
 import { site } from '@/content/site'
 
@@ -16,8 +17,8 @@ import { site } from '@/content/site'
 // para quien revisa decisiones y código. Todo lo que se prueba aquí es real.
 
 const DEMOS: Record<string, ReactNode> = {
-  'level-3': <CompanyAgentDemo />,
-  'level-4': <LeadAgentDemo />,
+  answer: <CompanyAgentDemo />,
+  act: <LeadAgentDemo />,
 }
 
 // Los datos del mercado de reventa se cachean 30 min (ver lib/resale/market).
@@ -35,9 +36,6 @@ export default async function HomePage() {
     { href: l.whatsapp ? `https://wa.me/${l.whatsapp}` : '', label: 'WhatsApp', icon: MessageCircle },
   ].filter((x) => x.href)
 
-  const liveCount = copy.levels.filter((x) => x.status === 'live').length + 1
-  const built = copy.levels.filter((x) => x.status === 'building')
-  const live = copy.levels.filter((x) => x.status === 'live')
   const p = copy.production
 
   return (
@@ -64,7 +62,7 @@ export default async function HomePage() {
               {copy.subhead}
             </p>
             <div className='mt-7 flex flex-wrap gap-3'>
-              <a href='#levels' className='site-btn site-btn-accent h-12 px-[22px] text-[15.5px]'>
+              <a href='#projects' className='site-btn site-btn-accent h-12 px-[22px] text-[15.5px]'>
                 {copy.cta}
                 <ArrowDown className='h-[17px] w-[17px]' />
               </a>
@@ -81,7 +79,7 @@ export default async function HomePage() {
               ))}
             </div>
             <div className='mt-6 flex flex-wrap gap-x-5 gap-y-2'>
-              {[...copy.meta, copy.proof.code].map((m) => (
+              {copy.meta.map((m) => (
                 <span key={m} className='inline-flex items-center gap-1.5 text-[13.5px]' style={{ color: 'var(--muted)' }}>
                   <Check className='h-3.5 w-3.5' style={{ color: 'var(--live)' }} strokeWidth={2.8} />
                   {m}
@@ -95,9 +93,9 @@ export default async function HomePage() {
         {/* PROOF STRIP */}
         <div className='mt-12 grid grid-cols-3 gap-2 sm:gap-3'>
           {[
-            [String(liveCount), copy.proof.live],
+            [String(copy.levels.length + 1), copy.proof.live],
             [snapshot ? `${(Math.floor(snapshot.totals.tracked / 1000) * 1000).toLocaleString('en-US')}+` : '—', copy.proof.listings],
-            ['4', copy.proof.levels],
+            [copy.proof.public, copy.proof.publicLabel],
           ].map(([v, k]) => (
             <div key={k} className='rounded-[14px] px-3 py-3 sm:px-4' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
               <p className='site-display text-[20px] font-bold sm:text-[26px]' style={{ letterSpacing: '-0.03em' }}>
@@ -112,7 +110,7 @@ export default async function HomePage() {
       </section>
 
       {/* LEVELS */}
-      <section id='levels' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-16'>
+      <section id='projects' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-16'>
         <div className='max-w-[64ch]'>
           <span className='site-kicker'>{copy.levelsIntro.kicker}</span>
           <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
@@ -122,14 +120,7 @@ export default async function HomePage() {
             {copy.levelsIntro.body}
           </p>
         </div>
-        {built.length > 0 && (
-          <div className='mt-6 grid grid-cols-1 gap-4 md:grid-cols-2'>
-            {built.map((lv) => (
-              <LevelSection key={lv.id} copy={copy} level={lv} />
-            ))}
-          </div>
-        )}
-        {live.map((lv) => (
+        {copy.levels.map((lv) => (
           <LevelSection key={lv.id} copy={copy} level={lv}>
             {DEMOS[lv.id]}
           </LevelSection>
@@ -139,7 +130,10 @@ export default async function HomePage() {
       {/* IN PRODUCTION: el sistema real, embebido */}
       <section id='production' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-24'>
         <div className='max-w-[68ch]'>
-          <span className='site-kicker'>{p.kicker}</span>
+          <div className='flex items-center gap-2.5'>
+            <LevelBars tier={3} of={3} />
+            <span className='site-kicker'>{p.kicker}</span>
+          </div>
           <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
             {p.title}
           </h2>
@@ -197,6 +191,39 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* SMALLER BUILDS: se muestra cuando haya alguna */}
+      {copy.smallBuilds.items.length > 0 && (
+        <section id='smaller' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-20'>
+          <span className='site-kicker'>{copy.smallBuilds.kicker}</span>
+          <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,30px)', letterSpacing: '-0.03em' }}>
+            {copy.smallBuilds.title}
+          </h2>
+          <div className='mt-6 grid grid-cols-1 gap-4 md:grid-cols-3'>
+            {copy.smallBuilds.items.map((x) => (
+              <a
+                key={x.name}
+                href={x.href}
+                className='site-lift flex flex-col rounded-[18px] p-[22px]'
+                style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+                <h3 className='site-display text-[18px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
+                  {x.name}
+                </h3>
+                <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
+                  {x.plain}
+                </p>
+                <div className='site-mono mt-4 flex flex-wrap gap-1.5 text-[11.5px]' style={{ color: 'var(--muted)' }}>
+                  {x.stack.map((t) => (
+                    <span key={t} className='rounded-full px-2 py-0.5' style={{ border: '1px solid var(--border)' }}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* FULL-STACK FOUNDATIONS */}
       <section className='mx-auto max-w-[1120px] px-6 pt-20'>

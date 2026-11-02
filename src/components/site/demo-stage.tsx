@@ -16,10 +16,10 @@ export type StageItem = {
 // Stage iframe height — the budget every demo is designed to fit on desktop.
 const FRAME_MIN = 560
 
-export function LevelBars({ tier }: { tier: number }) {
+export function LevelBars({ tier, of = 4 }: { tier: number; of?: number }) {
   return (
     <span className='flex items-end gap-[3px]' aria-hidden>
-      {[1, 2, 3, 4].map((n) => (
+      {Array.from({ length: of }, (_, i) => i + 1).map((n) => (
         <span
           key={n}
           className='w-[5px] rounded-sm'

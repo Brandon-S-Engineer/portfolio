@@ -10,7 +10,7 @@ import { site } from '@/content/site'
 // El home es de una sola vista: el menú salta a sus secciones. Las páginas de
 // agencia (/agency, /services, /solutions, /mvp-saas) se enlazan desde el footer.
 const links = [
-  { href: '/#levels', label: 'Levels' },
+  { href: '/#projects', label: 'Projects' },
   { href: '/#production', label: 'In production' },
   { href: '/#how', label: 'How I build' },
   { href: '/#contact', label: 'Contact' },
@@ -65,7 +65,7 @@ export default function SiteNav() {
           <div className='ml-1.5'>
             <SiteThemeToggle />
           </div>
-          <Link href='/#levels' className='site-btn site-btn-inverse ml-1.5 h-9 px-4 text-sm'>
+          <Link href='/#projects' className='site-btn site-btn-inverse ml-1.5 h-9 px-4 text-sm'>
             Try the live systems
           </Link>
         </nav>
@@ -98,7 +98,7 @@ export default function SiteNav() {
               </Link>
             ))}
             <Link
-              href='/#levels'
+              href='/#projects'
               onClick={() => setOpen(false)}
               className='site-btn site-btn-inverse mt-2 h-10 px-4 text-sm'>
               Try the live systems
