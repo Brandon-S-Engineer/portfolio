@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useVisiblePolling } from '@/lib/use-visible-polling'
 import type { ElecListingDTO } from '@/lib/electronicos/serialize'
+import type { MarketPrices } from '@/lib/electronicos/stats'
 import { cleanPrices, isPriceUsable, marginTarget, percentile } from '@/lib/electronicos/math'
 import { coarseKey, coarseLabel, parseConfigKey } from '@/lib/electronicos/categories'
 import {
@@ -27,27 +28,27 @@ import {
 
 type MarketRef = { p25: number; median: number; sellPrice: number; n: number; basis: string }
 
-function buildMarketRefs(listings: ElecListingDTO[], minSample: number): Map<string, MarketRef> {
-  const byConfig = new Map<string, ElecListingDTO[]>()
-  const byLineChip = new Map<string, ElecListingDTO[]>()
-  for (const l of listings) {
-    if (!isPriceUsable(l)) continue
-    if (l.configKey && !l.configKey.includes('?')) byConfig.set(l.configKey, [...(byConfig.get(l.configKey) ?? []), l])
-    const k = coarseKey(l)
-    if (k) byLineChip.set(k, [...(byLineChip.get(k) ?? []), l])
-  }
+/** Quita una vez el precio del propio listing (si cuenta para el mercado): no se compara contra sí mismo. */
+function withoutSelf(prices: number[] | undefined, l: ElecListingDTO): number[] {
+  if (!prices) return []
+  if (!isPriceUsable(l)) return prices
+  const i = prices.indexOf(l.price!)
+  return i < 0 ? prices : [...prices.slice(0, i), ...prices.slice(i + 1)]
+}
+
+function buildMarketRefs(listings: ElecListingDTO[], market: MarketPrices, minSample: number): Map<string, MarketRef> {
   const refs = new Map<string, MarketRef>()
   for (const l of listings) {
-    let group: ElecListingDTO[] = []
+    let group: number[] = []
     let basis = 'config'
-    if (l.configKey && !l.configKey.includes('?')) group = (byConfig.get(l.configKey) ?? []).filter((x) => x.id !== l.id)
+    if (l.configKey && !l.configKey.includes('?')) group = withoutSelf(market.byConfig[l.configKey], l)
     const k = coarseKey(l)
     if (group.length < minSample && k) {
-      group = (byLineChip.get(k) ?? []).filter((x) => x.id !== l.id)
+      group = withoutSelf(market.byCoarse[k], l)
       basis = coarseLabel(l.line)
     }
     if (group.length < minSample) continue
-    const prices = cleanPrices(group.map((g) => g.price!))
+    const prices = cleanPrices(group)
     refs.set(l.id, {
       p25: percentile(prices, 0.25)!,
       median: percentile(prices, 0.5)!,
@@ -57,6 +58,19 @@ function buildMarketRefs(listings: ElecListingDTO[], minSample: number): Map<str
     })
   }
   return refs
+}
+
+/** Los listings nuevos que llegan por polling entran al mercado, como antes. */
+function addToMarket(market: MarketPrices, ls: ElecListingDTO[]): MarketPrices {
+  const usable = ls.filter((l) => isPriceUsable(l))
+  if (!usable.length) return market
+  const next: MarketPrices = { byConfig: { ...market.byConfig }, byCoarse: { ...market.byCoarse } }
+  for (const l of usable) {
+    if (l.configKey && !l.configKey.includes('?')) next.byConfig[l.configKey] = [...(next.byConfig[l.configKey] ?? []), l.price!]
+    const k = coarseKey(l)
+    if (k) next.byCoarse[k] = [...(next.byCoarse[k] ?? []), l.price!]
+  }
+  return next
 }
 
 /** 2300 → "2.3k", -800 → "-800" */
@@ -279,11 +293,13 @@ function loadView(c: Category): ViewState {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ElecListingsTable({
-  category, listings, setListings, minScoreAlert, onMinScoreAlertChange, minSample, configFilter, onClearConfigFilter, onRegisterTrade,
+  category, listings, setListings, capturedCount, market: initialMarket, minScoreAlert, onMinScoreAlertChange, minSample, configFilter, onClearConfigFilter, onRegisterTrade,
 }: {
   category: Category
   listings: ElecListingDTO[]
   setListings: (fn: (prev: ElecListingDTO[]) => ElecListingDTO[]) => void
+  capturedCount: number
+  market: MarketPrices
   minScoreAlert: number
   onMinScoreAlertChange: (v: number) => void
   minSample: number
@@ -324,7 +340,30 @@ export default function ElecListingsTable({
     if (configFilter) setFilters((f) => ({ ...f, configKey: configFilter, status: '' }))
   }, [configFilter])
 
-  const refs = useMemo(() => buildMarketRefs(listings, minSample), [listings, minSample])
+  const [market, setMarket] = useState(initialMarket)
+  const refs = useMemo(() => buildMarketRefs(listings, market, minSample), [listings, market, minSample])
+
+  // De entrada solo vienen activos, comprados y vigilados; "Desaparecidos" o "Todos" piden el resto una vez
+  const [allLoaded, setAllLoaded] = useState(false)
+  useEffect(() => {
+    if (allLoaded || (filters.status !== 'DESAPARECIDO' && filters.status !== '')) return
+    let alive = true
+    fetch(`/api/electronicos/listings?category=${category}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { data: ElecListingDTO[] } | null) => {
+        if (!alive || !d) return
+        setListings((prev) => {
+          const byId = new Map(d.data.map((l) => [l.id, l]))
+          for (const l of prev) byId.set(l.id, l) // lo que ya está en pantalla es igual o más fresco
+          return Array.from(byId.values())
+        })
+        d.data.forEach((l) => knownIds.current.add(l.id))
+        setAllLoaded(true)
+        setOrderVersion((v) => v + 1)
+      })
+      .catch(() => { /* se reintenta al volver a elegir el filtro */ })
+    return () => { alive = false }
+  }, [filters.status, allLoaded, category, setListings])
 
   // ── Notificaciones + polling ─────────────────────────────────────────────
   useEffect(() => {
@@ -359,6 +398,7 @@ export default function ElecListingsTable({
       })
       const fresh = data.filter((l) => !knownIds.current.has(l.id))
       fresh.forEach((l) => knownIds.current.add(l.id))
+      if (fresh.length) setMarket((m) => addToMarket(m, fresh))
       for (const l of fresh.filter((x) => (x.opportunityScore ?? 0) >= minScoreRef.current).slice(0, 5)) {
         const elite = (l.opportunityScore ?? 0) >= 90
         notifyListing(l)
@@ -370,13 +410,13 @@ export default function ElecListingsTable({
   }, 30000, { hiddenWhileActiveMs: 10 * 60_000 })
 
   const reload = useCallback(async () => {
-    const res = await fetch(`/api/electronicos/listings?category=${category}`)
+    const res = await fetch(`/api/electronicos/listings?category=${category}${allLoaded ? '' : '&base=1'}`)
     if (res.ok) {
       const { data } = await res.json()
       setListings(() => data)
       setOrderVersion((v) => v + 1)
     }
-  }, [setListings, category])
+  }, [setListings, category, allLoaded])
 
   const handleRecalcular = async () => {
     setRecalculating(true)
@@ -395,7 +435,7 @@ export default function ElecListingsTable({
 
   const handlePurgar = async () => {
     const keep = listings.filter((l) => l.comprado).length
-    if (!confirm(`¿Borrar ${listings.length - keep} listings capturados${keep ? ` (se conservan ${keep} comprados)` : ''}? No se puede deshacer.`)) return
+    if (!confirm(`¿Borrar ${capturedCount - keep} listings capturados${keep ? ` (se conservan ${keep} comprados)` : ''}? No se puede deshacer.`)) return
     setPurging(true)
     try {
       const res = await fetch(`/api/electronicos/listings?category=${category}`, { method: 'DELETE' })
@@ -769,7 +809,7 @@ export default function ElecListingsTable({
 
       <div className='flex items-center justify-between gap-2 flex-wrap'>
         <div className='text-sm text-muted-foreground'>
-          {filtered.length} listing{filtered.length !== 1 ? 's' : ''}{filtered.length !== listings.length && ` de ${listings.length}`}
+          {filtered.length} listing{filtered.length !== 1 ? 's' : ''}{filtered.length !== capturedCount && ` de ${capturedCount}`}
           {filters.configKey && (
             <span className='ml-2 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs'>
               {configShort(parseConfigKey(filters.configKey))}

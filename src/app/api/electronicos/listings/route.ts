@@ -13,6 +13,7 @@ import { ingestListings, ingestSchema } from '@/lib/electronicos/ingest'
 import { toListingDTO } from '@/lib/electronicos/serialize'
 import { parseCategory } from '@/lib/electronicos/categories'
 import { LISTINGS_LIMIT } from '@/lib/electronicos/stats'
+import { BASE_SCOPE } from '@/lib/electronicos/listing-scope'
 
 function categoryParam(req: Request) {
   return parseCategory(new URL(req.url).searchParams.get('category'))
@@ -47,10 +48,13 @@ export async function GET(req: Request) {
   const error = await requireAdmin()
   if (error) return error
 
-  const since = new URL(req.url).searchParams.get('since')
+  const params = new URL(req.url).searchParams
+  const since = params.get('since')
   const category = categoryParam(req)
+  // base=1: solo lo que la tabla muestra de entrada (activos, comprados, vigilados)
+  const base = params.get('base') === '1'
   const rows = await prisma.elecListing.findMany({
-    where: { oculto: false, ...(since ? { updatedAt: { gte: new Date(since) } } : {}), ...(category ? { category } : {}) },
+    where: { oculto: false, ...(since ? { updatedAt: { gte: new Date(since) } } : {}), ...(category ? { category } : {}), ...(base ? { OR: BASE_SCOPE } : {}) },
     include: { zone: true },
     orderBy: { lastSeenAt: 'desc' },
     take: LISTINGS_LIMIT,

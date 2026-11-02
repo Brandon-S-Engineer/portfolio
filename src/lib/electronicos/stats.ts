@@ -41,6 +41,24 @@ export function indexGroups(rows: PriceRow[]): GroupIndex {
   return { byConfig, byLineChip }
 }
 
+/**
+ * Precios del mercado por grupo (config exacta y línea+chip), solo los usables.
+ * Se manda al navegador en vez de miles de listings completos: con esto calcula
+ * P25/mediana/P75 de cada listing igual que antes.
+ */
+export type MarketPrices = { byConfig: Record<string, number[]>; byCoarse: Record<string, number[]> }
+
+export function buildMarketPrices(rows: PriceRow[]): MarketPrices {
+  const market: MarketPrices = { byConfig: {}, byCoarse: {} }
+  for (const r of rows) {
+    if (!isPriceUsable(r)) continue
+    if (r.configKey && !r.configKey.includes('?')) (market.byConfig[r.configKey] ??= []).push(r.price!)
+    const k = coarseKey(r)
+    if (k) (market.byCoarse[k] ??= []).push(r.price!)
+  }
+  return market
+}
+
 export async function loadWindowRows(settings: ElecSettings, category?: Category): Promise<PriceRow[]> {
   const since = new Date(Date.now() - settings.windowDays * 86_400_000)
   return prisma.elecListing.findMany({

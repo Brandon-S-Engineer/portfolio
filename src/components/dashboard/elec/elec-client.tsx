@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import type { ElecSettings } from '@prisma/client'
 import { cn } from '@/lib/utils'
 import type { ElecListingDTO, ElecTradeDTO, ElecZoneDTO } from '@/lib/electronicos/serialize'
-import type { PriceTableRow, RotationTable } from '@/lib/electronicos/stats'
+import type { MarketPrices, PriceTableRow, RotationTable } from '@/lib/electronicos/stats'
 import { CATEGORY_META, type Category } from '@/lib/electronicos/categories'
 import ElecListingsTable from './listings-table'
 import ElecPreciosTable from './precios-table'
@@ -25,6 +25,8 @@ type Tab = (typeof TABS)[number]['id']
 export default function ElecClient(props: {
   category: Category
   listings: ElecListingDTO[]
+  capturedCount: number
+  market: MarketPrices
   prices: PriceTableRow[]
   rotation: RotationTable
   trades: ElecTradeDTO[]
@@ -81,7 +83,7 @@ export default function ElecClient(props: {
         <div>
           <h1 className='text-xl font-semibold'>{meta.label}</h1>
           <p className='text-sm text-muted-foreground mt-1'>
-            {meta.subtitle} · {listings.length} capturados · {active} activos · {prices.filter((p) => !p.configKey.includes('?')).length} configuraciones
+            {meta.subtitle} · {Math.max(props.capturedCount, listings.length)} capturados · {active} activos · {prices.filter((p) => !p.configKey.includes('?')).length} configuraciones
             {review > 0 && <> · <button className='underline underline-offset-2' onClick={() => setTab('listings')}>{review} por revisar</button></>}
           </p>
         </div>
@@ -121,6 +123,8 @@ export default function ElecClient(props: {
           category={category}
           listings={listings}
           setListings={setListings}
+          capturedCount={Math.max(props.capturedCount, listings.length)}
+          market={props.market}
           minScoreAlert={minScoreAlert}
           onMinScoreAlertChange={setMinScoreAlert}
           minSample={settings.minSample}
