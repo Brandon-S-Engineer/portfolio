@@ -127,9 +127,7 @@ export default function CompanyAgentDemo() {
           {messages.length === 0 && (
             <div>
               <p className='text-[14px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-                A fictional refurbished-iPhone store. Every answer is a live call to the model you pick below, grounded
-                in its policy docs (pgvector) and live inventory and orders (Postgres). Ask anything — try to make it
-                hallucinate. Or start with one of these:
+                Volt Mobile, a demo phone store. Ask anything — try to make it hallucinate:
               </p>
               <div className='mt-4 flex flex-col gap-2'>
                 {suggestedQuestions.map((q) => (
@@ -238,8 +236,7 @@ export default function CompanyAgentDemo() {
           )}
           {!showPrompt && trace.length === 0 && (
             <p className='text-[13px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-              Every tool call, the exact SQL, the retrieved sources with their similarity score, tokens, cost and
-              latency show up here as the agent works.
+              Tool calls, SQL, sources and cost appear here.
             </p>
           )}
           {!showPrompt && answer && (

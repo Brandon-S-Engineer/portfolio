@@ -5,6 +5,7 @@ import type { Decision, HiringCopy } from '@/content/hiring'
 // técnico. <details> nativo: funciona sin JS y es accesible por teclado.
 export default function BuildDetails({
   copy,
+  useWhen,
   pipeline = [],
   decisions,
   failures = [],
@@ -12,6 +13,7 @@ export default function BuildDetails({
   code,
 }: {
   copy: HiringCopy
+  useWhen?: string
   pipeline?: [string, string][]
   decisions: Decision[]
   failures?: string[]
@@ -24,18 +26,21 @@ export default function BuildDetails({
       className='group mt-4 rounded-[18px]'
       style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       <summary className='flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden'>
-        <span>
-          <span className='site-display text-[16px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
-            {t.howBuilt}
-          </span>
-          <span className='ml-2 text-[13px]' style={{ color: 'var(--muted)' }}>
-            {t.howBuiltHint}
-          </span>
+        <span className='site-display text-[16px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
+          {t.howBuilt}
         </span>
         <ChevronDown className='h-4 w-4 shrink-0 transition-transform group-open:rotate-180' style={{ color: 'var(--muted)' }} />
       </summary>
 
       <div className='space-y-6 px-5 pb-6'>
+        {useWhen && (
+          <p className='text-[14px]' style={{ lineHeight: 1.5, color: 'var(--muted)' }}>
+            <span className='font-semibold' style={{ color: 'var(--fg)' }}>
+              {t.useWhen}
+            </span>{' '}
+            {useWhen}
+          </p>
+        )}
         {pipeline.length > 0 && (
           <ol className='grid gap-2 sm:grid-cols-5'>
             {pipeline.map(([name, desc], i) => (

@@ -14,7 +14,7 @@ export default function SiteFooter() {
           <p
             className='mt-1 text-[13.5px]'
             style={{ color: 'var(--muted)' }}>
-            {site.tagline}
+            {site.role}
           </p>
         </div>
         <div

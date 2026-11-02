@@ -3,11 +3,9 @@ import type { HiringCopy, Level } from '@/content/hiring'
 import { LevelBars } from '@/components/site/demo-stage'
 import BuildDetails from './build-details'
 
-// Un sistema destacado: capa llana arriba (qué hace, cuándo usarlo), la demo
-// real en medio y la capa técnica colapsada abajo.
+// Un sistema destacado: título y una línea arriba, la demo real en medio y
+// la capa técnica (cuándo usarlo, decisiones, fallas) colapsada abajo.
 export default function LevelSection({ copy, level, children }: { copy: HiringCopy; level: Level; children?: ReactNode }) {
-  const t = copy.section
-
   return (
     <section id={level.id} className='scroll-mt-20 pt-16'>
       <div className='max-w-[68ch]'>
@@ -29,16 +27,11 @@ export default function LevelSection({ copy, level, children }: { copy: HiringCo
         <p className='mt-2 text-[16px]' style={{ lineHeight: 1.55 }}>
           {level.plain}
         </p>
-        <p className='mt-2 text-[14.5px]' style={{ lineHeight: 1.5, color: 'var(--muted)' }}>
-          <span className='font-semibold' style={{ color: 'var(--fg)' }}>
-            {t.useWhen}
-          </span>{' '}
-          {level.useWhen}
-        </p>
       </div>
       <div className='mt-6'>{children}</div>
       <BuildDetails
         copy={copy}
+        useWhen={level.useWhen}
         pipeline={level.pipeline}
         decisions={level.decisions}
         failures={level.failures}

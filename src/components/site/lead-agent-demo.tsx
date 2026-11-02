@@ -313,9 +313,7 @@ export default function LeadAgentDemo() {
         <div className='min-w-0 p-5 lg:border-l' style={{ borderColor: 'var(--border)', borderBottom: '1px solid var(--border)', background: 'var(--bg-2)' }}>
           {!qual && !busy && (
             <p className='text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-              Pick a lead and run it. The agent qualifies it, checks the CRM and inventory through its own MCP server,
-              drafts a reply and proposes CRM updates — then <b>stops</b> until you approve. Nothing is written before
-              that.
+              Pick a lead and run it. The agent <b>stops</b> before changing anything, until you approve.
             </p>
           )}
           {busy && (

@@ -12,7 +12,6 @@ import { site } from '@/content/site'
 const links = [
   { href: '/#projects', label: 'Projects' },
   { href: '/#production', label: 'In production' },
-  { href: '/#how', label: 'How I build' },
   { href: '/#contact', label: 'Contact' },
 ]
 

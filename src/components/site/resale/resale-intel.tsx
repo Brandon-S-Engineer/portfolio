@@ -23,7 +23,9 @@ const PIPELINE = [
   ['Agents', 'LLM judgment on top of the numbers'],
 ]
 
-export default function ResaleIntel({ snapshot }: { snapshot: MarketSnapshot | null }) {
+// `embedded`: en el home el título y el pipeline ya los pone la sección, así
+// que aquí solo van los datos.
+export default function ResaleIntel({ snapshot, embedded = false }: { snapshot: MarketSnapshot | null; embedded?: boolean }) {
   if (!snapshot) {
     return (
       <p className='text-[14px]' style={{ color: 'var(--muted)' }}>
@@ -42,11 +44,13 @@ export default function ResaleIntel({ snapshot }: { snapshot: MarketSnapshot | n
   return (
     <div className='space-y-4'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
-        <p className='max-w-[64ch] text-[15px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-          I resell used Apple devices in Mexico City. This is the system I built to run it: a Chrome extension feeds every
-          listing I browse into Postgres, deterministic code turns them into a live price model, and a multi-agent desk
-          decides which deals are worth buying.
-        </p>
+        {!embedded && (
+          <p className='max-w-[64ch] text-[15px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
+            I resell used Apple devices in Mexico City. This is the system I built to run it: a Chrome extension feeds every
+            listing I browse into Postgres, deterministic code turns them into a live price model, and a multi-agent desk decides
+            which deals are worth buying.
+          </p>
+        )}
         {snapshot.lastCapture && (
           <span
             className='site-mono inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px]'
@@ -73,28 +77,30 @@ export default function ResaleIntel({ snapshot }: { snapshot: MarketSnapshot | n
         ))}
       </div>
 
-      <ol className='grid gap-2 sm:grid-cols-5'>
-        {PIPELINE.map(([name, desc], i) => (
-          <li
-            key={name}
-            className='relative rounded-[12px] px-3 py-2.5'
-            style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-            <span className='site-mono text-[10.5px]' style={{ color: 'var(--accent)' }}>
-              0{i + 1}
-            </span>
-            <p className='text-[13px] font-medium'>{name}</p>
-            <p className='mt-0.5 text-[11.5px]' style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
-              {desc}
-            </p>
-            {i < PIPELINE.length - 1 && (
-              <ArrowRight
-                className='absolute top-1/2 -right-[13px] z-10 hidden h-4 w-4 -translate-y-1/2 sm:block'
-                style={{ color: 'var(--muted)' }}
-              />
-            )}
-          </li>
-        ))}
-      </ol>
+      {!embedded && (
+        <ol className='grid gap-2 sm:grid-cols-5'>
+          {PIPELINE.map(([name, desc], i) => (
+            <li
+              key={name}
+              className='relative rounded-[12px] px-3 py-2.5'
+              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <span className='site-mono text-[10.5px]' style={{ color: 'var(--accent)' }}>
+                0{i + 1}
+              </span>
+              <p className='text-[13px] font-medium'>{name}</p>
+              <p className='mt-0.5 text-[11.5px]' style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
+                {desc}
+              </p>
+              {i < PIPELINE.length - 1 && (
+                <ArrowRight
+                  className='absolute top-1/2 -right-[13px] z-10 hidden h-4 w-4 -translate-y-1/2 sm:block'
+                  style={{ color: 'var(--muted)' }}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
 
       <MarketRanges bands={snapshot.bands} />
       <ResaleWorkbench opportunities={snapshot.opportunities} />

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, Code2, FileText, Mail, MessageCircle, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Code2, FileText, Mail, MessageCircle, UserRound } from 'lucide-react'
 import ResaleIntel from '@/components/site/resale/resale-intel'
 import { getMarketSnapshot } from '@/lib/resale/market'
 import CompanyAgentDemo from '@/components/site/company-agent-demo'
@@ -35,6 +35,8 @@ export default async function HomePage() {
     { href: l.email ? `mailto:${l.email}` : '', label: 'Email', icon: Mail },
     { href: l.whatsapp ? `https://wa.me/${l.whatsapp}` : '', label: 'WhatsApp', icon: MessageCircle },
   ].filter((x) => x.href)
+  // En el hero solo lo que un reclutador abre primero; el resto vive en contacto.
+  const heroLinks = ['CV (PDF)', 'GitHub', 'LinkedIn'].flatMap((k) => links.filter((x) => x.label === k))
 
   const p = copy.production
 
@@ -61,30 +63,24 @@ export default async function HomePage() {
             <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
               {copy.subhead}
             </p>
-            <div className='mt-7 flex flex-wrap gap-3'>
+            <div className='mt-7 flex flex-wrap items-center gap-x-6 gap-y-4'>
               <a href='#projects' className='site-btn site-btn-accent h-12 px-[22px] text-[15.5px]'>
                 {copy.cta}
                 <ArrowDown className='h-[17px] w-[17px]' />
               </a>
-              {links.map((x) => (
-                <a
-                  key={x.label}
-                  href={x.href}
-                  target={x.href.startsWith('mailto:') ? undefined : '_blank'}
-                  rel='noreferrer'
-                  className='site-btn site-btn-outline h-12 px-[16px] text-[14.5px]'>
-                  <x.icon className='h-4 w-4' />
-                  {x.label}
-                </a>
-              ))}
-            </div>
-            <div className='mt-6 flex flex-wrap gap-x-5 gap-y-2'>
-              {copy.meta.map((m) => (
-                <span key={m} className='inline-flex items-center gap-1.5 text-[13.5px]' style={{ color: 'var(--muted)' }}>
-                  <Check className='h-3.5 w-3.5' style={{ color: 'var(--live)' }} strokeWidth={2.8} />
-                  {m}
-                </span>
-              ))}
+              <span className='flex flex-wrap gap-x-5 gap-y-2'>
+                {heroLinks.map((x) => (
+                  <a
+                    key={x.label}
+                    href={x.href}
+                    target='_blank'
+                    rel='noreferrer'
+                    className='inline-flex items-center gap-1.5 text-[14.5px] font-medium hover:underline'>
+                    <x.icon className='h-4 w-4' style={{ color: 'var(--muted)' }} />
+                    {x.label}
+                  </a>
+                ))}
+              </span>
             </div>
           </div>
           <LevelLadder copy={copy} />
@@ -111,15 +107,6 @@ export default async function HomePage() {
 
       {/* LEVELS */}
       <section id='projects' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-16'>
-        <div className='max-w-[64ch]'>
-          <span className='site-kicker'>{copy.levelsIntro.kicker}</span>
-          <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
-            {copy.levelsIntro.title}
-          </h2>
-          <p className='mt-2 text-[15.5px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-            {copy.levelsIntro.body}
-          </p>
-        </div>
         {copy.levels.map((lv) => (
           <LevelSection key={lv.id} copy={copy} level={lv}>
             {DEMOS[lv.id]}
@@ -137,6 +124,9 @@ export default async function HomePage() {
           <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,32px)', letterSpacing: '-0.03em' }}>
             {p.title}
           </h2>
+          <p className='mt-2 text-[16px]' style={{ lineHeight: 1.55 }}>
+            {p.plain}
+          </p>
         </div>
         <div className='mt-6 overflow-hidden rounded-[20px]' style={{ border: '1px solid var(--border)', background: 'var(--bg)' }}>
           <div className='flex items-center gap-3 px-4 py-2.5' style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
@@ -155,41 +145,13 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className='max-h-[860px] overflow-y-auto p-4 sm:p-6'>
-            <ResaleIntel snapshot={snapshot} />
+            <ResaleIntel snapshot={snapshot} embedded />
           </div>
         </div>
-        <BuildDetails copy={copy} decisions={p.decisions} stack={p.stack} code={p.code} />
+        <BuildDetails copy={copy} pipeline={p.pipeline} decisions={p.decisions} stack={p.stack} code={p.code} />
         <p className='site-mono mt-4 text-[12px]' style={{ color: 'var(--muted)' }}>
           {p.next}
         </p>
-      </section>
-
-      {/* HOW I BUILD: cada principio apunta a donde se ve */}
-      <section id='how' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-20'>
-        <span className='site-kicker'>{copy.principles.kicker}</span>
-        <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,30px)', letterSpacing: '-0.03em' }}>
-          {copy.principles.title}
-        </h2>
-        <div className='mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-          {copy.principles.items.map((x) => (
-            <a
-              key={x.title}
-              href={x.href}
-              className='site-lift flex flex-col rounded-[18px] p-[20px]'
-              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-              <h3 className='site-display text-[16.5px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
-                {x.title}
-              </h3>
-              <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-                {x.body}
-              </p>
-              <span className='mt-3 inline-flex items-center gap-1 text-[13px] font-semibold'>
-                {copy.principles.see}
-                <ArrowRight className='h-3.5 w-3.5' style={{ color: 'var(--accent)' }} />
-              </span>
-            </a>
-          ))}
-        </div>
       </section>
 
       {/* SMALLER BUILDS: se muestra cuando haya alguna */}
@@ -225,39 +187,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* FULL-STACK FOUNDATIONS */}
-      <section className='mx-auto max-w-[1120px] px-6 pt-20'>
-        <span className='site-kicker'>{copy.foundations.kicker}</span>
-        <h2 className='site-display mt-2 font-bold' style={{ fontSize: 'clamp(24px,3vw,30px)', letterSpacing: '-0.03em' }}>
-          {copy.foundations.title}
-        </h2>
-        <p className='mt-2 max-w-[64ch] text-[15px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-          {copy.foundations.body}
-        </p>
-        <div className='mt-6 grid grid-cols-1 gap-4 md:grid-cols-3'>
-          {copy.foundations.items.map((x) => (
-            <a
-              key={x.name}
-              href={x.href}
-              target={x.href.startsWith('http') ? '_blank' : undefined}
-              rel='noreferrer'
-              className='site-lift flex flex-col rounded-[18px] p-[22px]'
-              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-              <h3 className='site-display text-[18px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
-                {x.name}
-              </h3>
-              <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-                {x.body}
-              </p>
-              <span className='mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold'>
-                {copy.foundations.open}
-                <ArrowUpRight className='h-3.5 w-3.5' style={{ color: 'var(--accent)' }} />
-              </span>
-            </a>
-          ))}
-        </div>
-      </section>
-
       {/* CONTACT */}
       <section id='contact' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-20 pb-24'>
         <div
@@ -274,7 +203,7 @@ export default async function HomePage() {
               {copy.contact.title}
             </h2>
             <p className='mx-auto mt-4 max-w-[52ch] text-[16.5px]' style={{ lineHeight: 1.55, opacity: 0.72 }}>
-              {copy.availability}. {copy.contact.body}
+              {copy.availability}
             </p>
             <div className='mt-8 flex flex-wrap justify-center gap-3'>
               {links.map((x) => (
