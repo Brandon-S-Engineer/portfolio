@@ -7,7 +7,7 @@
 // ficticia (Volt Mobile). Regla: lo que se muestra aquí pega a un backend real;
 // un nivel sin backend todavía se marca 'building', nunca se simula.
 
-const REPO = 'https://github.com/Brandon-S-Engineer/real-state/tree/main'
+const REPO = 'https://github.com/Brandon-S-Engineer/portfolio/tree/main'
 
 export type Decision = { choice: string; why: string; tradeoff: string }
 
@@ -152,7 +152,7 @@ const levels: Level[] = [
 ]
 
 const en = {
-  role: 'Applied AI Engineer',
+  role: 'Full-stack & AI Engineer',
   headline: 'I build software where AI does real work — and stays under control.',
   subhead:
     'From simple automations to agents that act on a CRM with a human approving. Every system below is live: try it, then open “How it’s built” to see the decisions behind it.',
