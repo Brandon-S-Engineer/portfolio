@@ -156,20 +156,21 @@
    Light tokens on .site-theme; dark tokens on .dark .site-theme (next-themes).
    ========================================================================== */
 .site-theme {
-  --bg: oklch(0.982 0.004 70);
-  --bg-2: oklch(0.963 0.005 70);
+  /* Neutros fríos (sin tinte cálido) y un azul de marca. */
+  --bg: oklch(0.985 0.003 255);
+  --bg-2: oklch(0.965 0.005 255);
   --card: oklch(1 0 0);
-  --fg: oklch(0.22 0.01 60);
-  --muted: oklch(0.505 0.01 60);
-  --border: oklch(0.19 0.01 60 / 0.12);
-  --border-strong: oklch(0.19 0.01 60 / 0.2);
-  --accent: oklch(0.605 0.2 39);
+  --fg: oklch(0.21 0.02 260);
+  --muted: oklch(0.5 0.02 260);
+  --border: oklch(0.2 0.02 260 / 0.12);
+  --border-strong: oklch(0.2 0.02 260 / 0.2);
+  --accent: oklch(0.53 0.2 262);
   --accent-fg: oklch(0.995 0 0);
-  --accent-soft: oklch(0.605 0.2 39 / 0.1);
+  --accent-soft: oklch(0.53 0.2 262 / 0.1);
   --live: oklch(0.58 0.16 155);
-  --code-bg: oklch(0.965 0.005 70);
-  --code-fg: oklch(0.3 0.01 60);
-  --shadow: 0 1px 2px oklch(0.2 0.01 60 / 0.04), 0 8px 30px oklch(0.2 0.01 60 / 0.06);
+  --code-bg: oklch(0.965 0.005 255);
+  --code-fg: oklch(0.3 0.02 260);
+  --shadow: 0 1px 2px oklch(0.2 0.02 260 / 0.04), 0 8px 30px oklch(0.2 0.02 260 / 0.07);
 
   background: var(--bg);
   color: var(--fg);
@@ -178,19 +179,19 @@
 }
 
 .dark .site-theme {
-  --bg: oklch(0.168 0.006 60);
-  --bg-2: oklch(0.205 0.006 60);
-  --card: oklch(0.216 0.007 60);
-  --fg: oklch(0.95 0.004 75);
-  --muted: oklch(0.66 0.006 75);
+  --bg: oklch(0.165 0.012 260);
+  --bg-2: oklch(0.2 0.014 260);
+  --card: oklch(0.215 0.015 260);
+  --fg: oklch(0.95 0.006 255);
+  --muted: oklch(0.68 0.015 255);
   --border: oklch(1 0 0 / 0.1);
   --border-strong: oklch(1 0 0 / 0.18);
-  --accent: oklch(0.72 0.185 44);
-  --accent-fg: oklch(0.18 0.03 44);
-  --accent-soft: oklch(0.72 0.185 44 / 0.14);
+  --accent: oklch(0.7 0.16 258);
+  --accent-fg: oklch(0.16 0.03 260);
+  --accent-soft: oklch(0.7 0.16 258 / 0.16);
   --live: oklch(0.76 0.15 158);
-  --code-bg: oklch(0.235 0.008 60);
-  --code-fg: oklch(0.82 0.006 75);
+  --code-bg: oklch(0.235 0.015 260);
+  --code-fg: oklch(0.82 0.01 255);
   --shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 12px 40px oklch(0 0 0 / 0.35);
 }
 

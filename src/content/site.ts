@@ -7,7 +7,7 @@
 
 export const site = {
   name: 'Brandon Soria',
-  role: 'Full-Stack & AI Engineer',
+  role: 'Full-stack & AI Engineer',
   // The 5-second hook. Speed + outcome, mirrors what high-budget clients
   // actually search for.
   tagline: 'Production-ready AI web apps in days, not months.',
