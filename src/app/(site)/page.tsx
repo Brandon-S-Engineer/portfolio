@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowDown, ArrowUpRight, Code2, FileText, Mail, MessageCircle, UserRound } from 'lucide-react'
 import ResaleIntel from '@/components/site/resale/resale-intel'
@@ -166,14 +167,32 @@ export default async function HomePage() {
               <a
                 key={x.name}
                 href={x.href}
-                className='site-lift flex flex-col rounded-[18px] p-[22px]'
+                target='_blank'
+                rel='noreferrer'
+                className={`site-lift flex flex-col rounded-[18px] p-[22px] ${x.image ? 'md:col-span-3' : ''}`}
                 style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+                {x.image && (
+                  <Image
+                    src={x.image}
+                    alt={`${x.name} workflow`}
+                    width={1800}
+                    height={534}
+                    sizes='(min-width: 1120px) 1072px, 100vw'
+                    className='mb-5 h-auto w-full rounded-[12px]'
+                    style={{ border: '1px solid var(--border)' }}
+                  />
+                )}
                 <h3 className='site-display text-[18px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
                   {x.name}
                 </h3>
                 <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
                   {x.plain}
                 </p>
+                {x.status && (
+                  <p className='mt-2 text-[12.5px]' style={{ color: 'var(--muted)' }}>
+                    {x.status}
+                  </p>
+                )}
                 <div className='site-mono mt-4 flex flex-wrap gap-1.5 text-[11.5px]' style={{ color: 'var(--muted)' }}>
                   {x.stack.map((t) => (
                     <span key={t} className='rounded-full px-2 py-0.5' style={{ border: '1px solid var(--border)' }}>

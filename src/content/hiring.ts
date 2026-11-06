@@ -110,8 +110,17 @@ const levels: Level[] = [
 
 // Funcionalidades más chicas pero reales (voz, clasificación con evals,
 // automatización). La sección no se muestra mientras esté vacía.
-export type SmallBuild = { name: string; plain: string; stack: string[]; href: string }
-const smallBuilds: SmallBuild[] = []
+export type SmallBuild = { name: string; plain: string; stack: string[]; href: string; image?: string; status?: string }
+const smallBuilds: SmallBuild[] = [
+  {
+    name: 'Lead triage with n8n',
+    plain: 'Sorts incoming messages and sends serious buyers to the Lead agent. If a step fails, a person gets the lead.',
+    stack: ['n8n', 'OpenAI', 'Webhooks'],
+    href: `${REPO}/services/n8n-lead-triage`,
+    image: '/builds/n8n-lead-triage.png',
+    status: 'Self-hosted · run locally · workflow and test runs on GitHub',
+  },
+]
 
 const en = {
   role: 'Full-stack & AI Engineer',

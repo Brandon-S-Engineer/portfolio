@@ -1,0 +1,15 @@
+# n8n con el flujo de triage. Uso: docker compose up, luego importa workflow.json
+services:
+  n8n:
+    image: n8nio/n8n:2.46.6
+    ports:
+      - '5678:5678'
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:?set OPENAI_API_KEY}
+      - LEAD_AGENT_URL=${LEAD_AGENT_URL:-https://volt-lead-agent.onrender.com}
+      # El flujo lee esas dos variables desde sus expresiones.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+volumes:
+  n8n_data:

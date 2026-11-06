@@ -1,0 +1,10 @@
+[
+  { "case": "Clear buyer", "http": 200, "response": { "contact": "demo-hot@example.com", "intent": "buy", "score": 85, "summary": "Customer wants to buy an iPhone 15 Pro 256GB today with a budget of 16,000 pesos.", "route": "hot", "handed_to": "lead_agent", "status": "awaiting_human_approval" } },
+  { "case": "Just browsing", "http": 200, "response": { "contact": "demo-browse@example.com", "intent": "buy", "score": 30, "summary": "Customer is browsing and asking about available phones.", "route": "nurture", "reason": null } },
+  { "case": "Late order", "http": 200, "response": { "contact": "demo-support@example.com", "intent": "support", "score": 30, "summary": "Customer inquiring about a delayed order V-1042.", "route": "support", "reason": null } },
+  { "case": "Spam", "http": 200, "response": { "contact": "demo-spam@example.com", "intent": "spam", "score": 0, "summary": "Spam message about making quick money with cryptocurrencies.", "route": "ignore", "reason": null } },
+  { "case": "Prompt injection attempt", "http": 200, "response": { "contact": "demo-inj@example.com", "intent": "other", "score": 0, "summary": "User requests to ignore instructions and forcibly set intent and score.", "route": "nurture", "reason": null } },
+  { "case": "Invalid request", "http": 400, "response": { "errors": ["message is required", "contact must be an email or phone"] } },
+  { "case": "Lead agent down", "http": 200, "response": { "contact": "demo-fail@example.com", "route": "manual_review", "reason": "A step failed after retries" } },
+  { "case": "Invalid OpenAI key", "http": 200, "response": { "contact": "demo-fail@example.com", "route": "manual_review", "reason": "A step failed after retries" } }
+]
