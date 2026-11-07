@@ -55,7 +55,7 @@ export default function PipelineFlow({ steps, label }: { steps: [string, string,
               key={name}
               className='relative flex flex-col rounded-[12px] px-3 py-2.5'
               style={{
-                background: current ? `color-mix(in oklch, ${tone} 11%, var(--card))` : 'var(--bg-2)',
+                background: current ? `color-mix(in srgb, ${tone} 11%, var(--card))` : 'var(--bg-2)',
                 border: `1px solid ${current ? tone : 'var(--border)'}`,
                 transition: 'background 600ms ease, border-color 600ms ease',
               }}>

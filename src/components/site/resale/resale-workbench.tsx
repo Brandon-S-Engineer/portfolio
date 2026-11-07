@@ -24,7 +24,7 @@ type StepState = { status: 'start' | 'done' | 'skipped'; ms?: number; tokens?: n
 const KIND_ICON = { code: Code2, SQL: Database, LLM: Sparkles }
 
 // Sin scroll: solo los primeros, para que la sección mida lo mismo siempre.
-const MAX_DEALS = 6
+const MAX_DEALS = 5
 
 const SAMPLE = 'iPhone 16 Pro Max 256 $6,000 solo hoy, te lo envío por paquetería, pago por adelantado'
 
@@ -182,23 +182,21 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
           </p>
         )}
 
-        {(running || final) && (
-          <div className='mt-3 space-y-2'>
-            {(['parse', 'spec', 'comps'] as AgentId[]).map((id) => (
-              <StepCard key={id} id={id} state={steps[id]} />
-            ))}
-            <div className='site-mono flex items-center gap-2 pt-1 text-[10.5px] uppercase' style={{ color: 'var(--muted)' }}>
-              <span className='h-px flex-1' style={{ background: 'var(--border)' }} />
-              running in parallel
-              <span className='h-px flex-1' style={{ background: 'var(--border)' }} />
-            </div>
-            <div className='grid gap-2 sm:grid-cols-2'>
-              <StepCard id='market' state={steps.market} />
-              <StepCard id='risk' state={steps.risk} />
-            </div>
-            <StepCard id='lead' state={steps.lead} />
+        <div className='mt-3 space-y-2'>
+          {(['parse', 'spec', 'comps'] as AgentId[]).map((id) => (
+            <StepCard key={id} id={id} state={steps[id]} />
+          ))}
+          <div className='site-mono flex items-center gap-2 pt-1 text-[10.5px] uppercase' style={{ color: 'var(--muted)' }}>
+            <span className='h-px flex-1' style={{ background: 'var(--border)' }} />
+            running in parallel
+            <span className='h-px flex-1' style={{ background: 'var(--border)' }} />
           </div>
-        )}
+          <div className='grid gap-2 sm:grid-cols-2'>
+            <StepCard id='market' state={steps.market} />
+            <StepCard id='risk' state={steps.risk} />
+          </div>
+          <StepCard id='lead' state={steps.lead} />
+        </div>
 
         {final && <Verdict f={final} copied={copied} onCopy={() => {
           navigator.clipboard.writeText(final.result.offerMessage).then(() => setCopied(true))
