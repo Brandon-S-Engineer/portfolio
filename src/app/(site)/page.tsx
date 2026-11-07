@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowDown, ArrowUpRight, Code2, FileText, Mail, MessageCircle, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, FileText, Mail, Phone } from 'lucide-react'
 import ResaleIntel from '@/components/site/resale/resale-intel'
 import { getMarketSnapshot } from '@/lib/resale/market'
 import CompanyAgentDemo from '@/components/site/company-agent-demo'
@@ -9,13 +9,14 @@ import LeadAgentDemo from '@/components/site/lead-agent-demo'
 import LevelLadder from '@/components/site/hiring/level-ladder'
 import LevelSection from '@/components/site/hiring/level-section'
 import BuildDetails from '@/components/site/hiring/build-details'
+import Rich from '@/components/site/hiring/rich'
+import { GitHubIcon, LinkedInIcon, WhatsAppIcon } from '@/components/site/brand-icons'
 import { LevelBars } from '@/components/site/demo-stage'
 import { hiringCopy } from '@/content/hiring'
 import { site } from '@/content/site'
 
-// Home de empleo. Se lee en dos capas: la escalera (qué hace cada nivel, en
-// lenguaje llano) para quien no es técnico, y "How it's built" en cada nivel
-// para quien revisa decisiones y código. Todo lo que se prueba aquí es real.
+// Home de empleo: la escalera (qué hace cada sistema, en lenguaje llano), la
+// demo real y "How it's built" para quien revisa decisiones y código.
 
 const DEMOS: Record<string, ReactNode> = {
   answer: <CompanyAgentDemo />,
@@ -30,14 +31,15 @@ export default async function HomePage() {
   const snapshot = await getMarketSnapshot()
   const { links: l } = site.hiring
   const links = [
-    { href: l.github, label: 'GitHub', icon: Code2 },
-    { href: l.linkedin, label: 'LinkedIn', icon: UserRound },
-    { href: l.cv, label: 'CV (PDF)', icon: FileText },
-    { href: l.email ? `mailto:${l.email}` : '', label: 'Email', icon: Mail },
-    { href: l.whatsapp ? `https://wa.me/${l.whatsapp}` : '', label: 'WhatsApp', icon: MessageCircle },
-  ].filter((x) => x.href)
-  // En el hero solo lo que un reclutador abre primero; el resto vive en contacto.
-  const heroLinks = ['CV (PDF)', 'GitHub', 'LinkedIn'].flatMap((k) => links.filter((x) => x.label === k))
+    { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon },
+    { href: `tel:${l.phone}`, label: 'Call', icon: Phone },
+    { href: `mailto:${l.email}`, label: 'Email', icon: Mail },
+    { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon },
+    { href: l.github, label: 'GitHub', icon: GitHubIcon },
+    { href: l.cv, label: 'CV', icon: FileText },
+  ]
+  // mailto y tel abren su app; lo demás, en otra pestaña.
+  const opensTab = (href: string) => !/^(mailto|tel):/.test(href)
 
   const p = copy.production
 
@@ -62,46 +64,28 @@ export default async function HomePage() {
               {copy.headline}
             </h1>
             <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
-              {copy.subhead}
+              <Rich text={copy.subhead} />
             </p>
-            <div className='mt-7 flex flex-wrap items-center gap-x-6 gap-y-4'>
-              <a href='#projects' className='site-btn site-btn-accent h-12 px-[22px] text-[15.5px]'>
-                {copy.cta}
-                <ArrowDown className='h-[17px] w-[17px]' />
-              </a>
-              <span className='flex flex-wrap gap-x-5 gap-y-2'>
-                {heroLinks.map((x) => (
-                  <a
-                    key={x.label}
-                    href={x.href}
-                    target='_blank'
-                    rel='noreferrer'
-                    className='inline-flex items-center gap-1.5 text-[14.5px] font-medium hover:underline'>
-                    <x.icon className='h-4 w-4' style={{ color: 'var(--muted)' }} />
-                    {x.label}
-                  </a>
-                ))}
-              </span>
-            </div>
+            <a href='#projects' className='site-btn site-btn-accent mt-7 h-12 px-[22px] text-[15.5px]'>
+              {copy.cta}
+              <ArrowDown className='h-[17px] w-[17px]' />
+            </a>
           </div>
           <LevelLadder copy={copy} />
         </div>
 
-        {/* PROOF STRIP */}
-        <div className='mt-12 grid grid-cols-3 gap-2 sm:gap-3'>
-          {[
-            [String(copy.levels.length + 1), copy.proof.live],
-            [snapshot ? `${(Math.floor(snapshot.totals.tracked / 1000) * 1000).toLocaleString('en-US')}+` : '—', copy.proof.listings],
-            [copy.proof.public, copy.proof.publicLabel],
-          ].map(([v, k]) => (
-            <div key={k} className='rounded-[14px] px-3 py-3 sm:px-4' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-              <p className='site-display text-[20px] font-bold sm:text-[26px]' style={{ letterSpacing: '-0.03em' }}>
-                {v}
-              </p>
-              <p className='text-[11.5px] leading-snug sm:text-[13px]' style={{ color: 'var(--muted)' }}>
-                {k}
-              </p>
-            </div>
+        {/* LINKS: el contacto a un clic */}
+        <div className='mt-12 grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3'>
+          {links.map((x) => (
+            <a
+              key={x.label}
+              href={x.href}
+              {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
+              className='site-lift flex flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
+              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <x.icon className='h-6 w-6' style={{ color: 'var(--accent)' }} />
+              {x.label}
+            </a>
           ))}
         </div>
       </section>
@@ -126,7 +110,7 @@ export default async function HomePage() {
             {p.title}
           </h2>
           <p className='mt-2 text-[16px]' style={{ lineHeight: 1.55 }}>
-            {p.plain}
+            <Rich text={p.plain} />
           </p>
         </div>
         <div className='mt-6 overflow-hidden rounded-[20px]' style={{ border: '1px solid var(--border)', background: 'var(--bg)' }}>
@@ -145,7 +129,7 @@ export default async function HomePage() {
               Full page <ArrowUpRight className='h-3.5 w-3.5' />
             </Link>
           </div>
-          <div className='max-h-[860px] overflow-y-auto p-4 sm:p-6'>
+          <div className='p-4 sm:p-6'>
             <ResaleIntel snapshot={snapshot} embedded />
           </div>
         </div>
@@ -171,22 +155,11 @@ export default async function HomePage() {
                 rel='noreferrer'
                 className={`site-lift flex flex-col rounded-[18px] p-[22px] ${x.image ? 'md:col-span-3' : ''}`}
                 style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-                {x.image && (
-                  <Image
-                    src={x.image}
-                    alt={`${x.name} workflow`}
-                    width={1800}
-                    height={534}
-                    sizes='(min-width: 1120px) 1072px, 100vw'
-                    className='mb-5 h-auto w-full rounded-[12px]'
-                    style={{ border: '1px solid var(--border)' }}
-                  />
-                )}
                 <h3 className='site-display text-[18px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
                   {x.name}
                 </h3>
                 <p className='mt-2 flex-1 text-[14px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-                  {x.plain}
+                  <Rich text={x.plain} />
                 </p>
                 {x.status && (
                   <p className='mt-2 text-[12.5px]' style={{ color: 'var(--muted)' }}>
@@ -200,6 +173,17 @@ export default async function HomePage() {
                     </span>
                   ))}
                 </div>
+                {x.image && (
+                  <Image
+                    src={x.image}
+                    alt={`${x.name} workflow`}
+                    width={1800}
+                    height={534}
+                    sizes='(min-width: 1120px) 1072px, 100vw'
+                    className='mt-5 h-auto w-full rounded-[12px]'
+                    style={{ border: '1px solid var(--border)' }}
+                  />
+                )}
               </a>
             ))}
           </div>
@@ -229,8 +213,7 @@ export default async function HomePage() {
                 <a
                   key={x.label}
                   href={x.href}
-                  target={x.href.startsWith('mailto:') ? undefined : '_blank'}
-                  rel='noreferrer'
+                  {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
                   className='site-btn h-[50px] px-[22px] text-[15px]'
                   style={{ background: 'transparent', color: 'var(--bg)', border: '1px solid color-mix(in oklch, var(--bg) 40%, transparent)' }}>
                   <x.icon className='h-4 w-4' />

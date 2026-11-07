@@ -2,9 +2,10 @@ import type { ReactNode } from 'react'
 import type { HiringCopy, Level } from '@/content/hiring'
 import { LevelBars } from '@/components/site/demo-stage'
 import BuildDetails from './build-details'
+import Rich from './rich'
 
 // Un sistema destacado: título y una línea arriba, la demo real en medio y
-// la capa técnica (cuándo usarlo, decisiones, fallas) colapsada abajo.
+// la capa técnica (ejemplo animado, decisiones, fallas) abierta abajo.
 export default function LevelSection({ copy, level, children }: { copy: HiringCopy; level: Level; children?: ReactNode }) {
   return (
     <section id={level.id} className='scroll-mt-20 pt-16'>
@@ -25,7 +26,7 @@ export default function LevelSection({ copy, level, children }: { copy: HiringCo
           {level.name}
         </h3>
         <p className='mt-2 text-[16px]' style={{ lineHeight: 1.55 }}>
-          {level.plain}
+          <Rich text={level.plain} />
         </p>
       </div>
       <div className='mt-6'>{children}</div>

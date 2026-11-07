@@ -1,8 +1,10 @@
-import { ArrowRight, ChevronDown, Code2 } from 'lucide-react'
+import { ChevronDown, Code2 } from 'lucide-react'
 import type { Decision, HiringCopy } from '@/content/hiring'
+import PipelineFlow from './pipeline-flow'
+import Rich from './rich'
 
-// Capa técnica de cada nivel, cerrada por defecto para no abrumar a quien no es
-// técnico. <details> nativo: funciona sin JS y es accesible por teclado.
+// Capa técnica de cada sistema, abierta por defecto y con un ejemplo animado.
+// <details> nativo: se puede cerrar sin JS y es accesible por teclado.
 export default function BuildDetails({
   copy,
   useWhen,
@@ -14,7 +16,7 @@ export default function BuildDetails({
 }: {
   copy: HiringCopy
   useWhen?: string
-  pipeline?: [string, string][]
+  pipeline?: [string, string, string][]
   decisions: Decision[]
   failures?: string[]
   stack: string[]
@@ -23,10 +25,11 @@ export default function BuildDetails({
   const t = copy.section
   return (
     <details
+      open
       className='group mt-4 rounded-[18px]'
       style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       <summary className='flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden'>
-        <span className='site-display text-[16px] font-semibold' style={{ letterSpacing: '-0.02em' }}>
+        <span className='site-display text-[16px] font-bold' style={{ letterSpacing: '-0.02em' }}>
           {t.howBuilt}
         </span>
         <ChevronDown className='h-4 w-4 shrink-0 transition-transform group-open:rotate-180' style={{ color: 'var(--muted)' }} />
@@ -41,30 +44,7 @@ export default function BuildDetails({
             {useWhen}
           </p>
         )}
-        {pipeline.length > 0 && (
-          <ol className='grid gap-2 sm:grid-cols-5'>
-            {pipeline.map(([name, desc], i) => (
-              <li
-                key={name}
-                className='relative rounded-[12px] px-3 py-2.5'
-                style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
-                <span className='site-mono text-[10.5px]' style={{ color: 'var(--accent)' }}>
-                  0{i + 1}
-                </span>
-                <p className='text-[13px] font-medium'>{name}</p>
-                <p className='mt-0.5 text-[11.5px]' style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
-                  {desc}
-                </p>
-                {i < pipeline.length - 1 && (
-                  <ArrowRight
-                    className='absolute top-1/2 -right-[13px] z-10 hidden h-4 w-4 -translate-y-1/2 sm:block'
-                    style={{ color: 'var(--muted)' }}
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
+        {pipeline.length > 0 && <PipelineFlow steps={pipeline} label={t.example} />}
 
         <div>
           <p className='site-kicker'>{t.decisions}</p>
@@ -96,7 +76,9 @@ export default function BuildDetails({
               {failures.map((f) => (
                 <li key={f} className='flex gap-2 text-[13.5px]' style={{ lineHeight: 1.5, color: 'var(--muted)' }}>
                   <span style={{ color: 'var(--accent)' }}>→</span>
-                  {f}
+                  <span>
+                    <Rich text={f} />
+                  </span>
                 </li>
               ))}
             </ul>

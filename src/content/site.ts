@@ -23,6 +23,7 @@ export const site = {
       email: 'brandon.s.engineer@gmail.com',
       // Número en formato internacional para wa.me (52 = México).
       whatsapp: '525516516493',
+      phone: '+525516516493',
       // El CV en español vive junto: /cv/Brandon-Soria-CV-ES.pdf
       cv: '/cv/Brandon-Soria-CV-EN.pdf',
     },

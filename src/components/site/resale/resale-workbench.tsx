@@ -23,6 +23,9 @@ type StepState = { status: 'start' | 'done' | 'skipped'; ms?: number; tokens?: n
 
 const KIND_ICON = { code: Code2, SQL: Database, LLM: Sparkles }
 
+// Sin scroll: solo los primeros, para que la sección mida lo mismo siempre.
+const MAX_DEALS = 6
+
 const SAMPLE = 'iPhone 16 Pro Max 256 $6,000 solo hoy, te lo envío por paquetería, pago por adelantado'
 
 export default function ResaleWorkbench({ opportunities }: { opportunities: Opportunity[] }) {
@@ -94,8 +97,8 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
         <p className='mt-1 text-[13px]' style={{ color: 'var(--muted)' }}>
           Scored by the CRM against the market. Pick one and let the agents decide.
         </p>
-        <ul className='mt-3 max-h-[440px] space-y-1.5 overflow-y-auto pr-1'>
-          {opportunities.map((o) => {
+        <ul className='mt-3 space-y-1.5'>
+          {opportunities.slice(0, MAX_DEALS).map((o) => {
             const vs = o.marketP50 ? Math.round(((o.marketP50 - o.price) / o.marketP50) * 100) : null
             const isSel = selected === o.id
             return (
@@ -110,7 +113,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
                     border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
                   }}>
                   <span className='flex items-baseline justify-between gap-2'>
-                    <span className='truncate text-[13.5px] font-medium'>{o.model}</span>
+                    <span className='truncate text-[13.5px] font-semibold'>{o.model}</span>
                     <span className='site-mono shrink-0 text-[13px] font-medium'>{mxn(o.price)}</span>
                   </span>
                   <span className='mt-0.5 block truncate text-[12px]' style={{ color: 'var(--muted)' }}>
@@ -219,7 +222,7 @@ function StepCard({ id, state }: { id: AgentId; state?: StepState }) {
           className={`h-4 w-4 shrink-0 ${status === 'start' ? 'animate-spin' : ''}`}
           style={{ color: status === 'done' ? 'var(--live)' : status === 'start' ? 'var(--accent)' : 'var(--border)' }}
         />
-        <span className='shrink-0 text-[13px] font-medium'>{meta.label}</span>
+        <span className='shrink-0 text-[13px] font-semibold'>{meta.label}</span>
         <span
           className='site-mono inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px]'
           style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>

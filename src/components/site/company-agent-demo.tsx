@@ -105,7 +105,7 @@ export default function CompanyAgentDemo() {
             Volt Mobile · support agent
           </span>
           <span
-            className='site-mono hidden rounded-full px-2 py-0.5 text-[11px] sm:inline'
+            className='site-mono hidden rounded-full px-2 py-0.5 text-[11px] font-bold sm:inline'
             style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             live model call · not scripted
           </span>
@@ -216,7 +216,7 @@ export default function CompanyAgentDemo() {
         className='flex h-[520px] min-w-0 flex-col'
         style={{ background: 'var(--bg-2)', borderLeft: '1px solid var(--border)' }}>
         <div className='flex items-center justify-between px-5 py-3' style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className='site-kicker'>{showPrompt ? 'Prompt & tools' : 'How the answer was built'}</span>
+          <span className='site-kicker'>{showPrompt ? 'Prompt & tools' : 'Live build'}</span>
           <button
             type='button'
             onClick={() => setShowPrompt((v) => !v)}

@@ -20,7 +20,8 @@ export type Level = {
   // Una frase, sin jerga: qué hace para el negocio.
   plain: string
   useWhen: string
-  pipeline: [string, string][]
+  // Paso, qué hace y qué pasa en un ejemplo.
+  pipeline: [string, string, string][]
   decisions: Decision[]
   failures: string[]
   stack: string[]
@@ -33,14 +34,14 @@ const levels: Level[] = [
     id: 'answer',
     verb: 'Answer',
     name: 'Answer from company data',
-    plain: 'Answers customers from the store’s policies and live orders, and cites every source.',
+    plain: 'Answers customers from the store’s policies and live orders, and **cites every source**.',
     useWhen: 'the answers exist in documents or a database, but finding them takes a person.',
     pipeline: [
-      ['Question', 'streamed chat'],
-      ['Agent loop', 'tool calling, max 5 steps'],
-      ['search_docs', 'policies in pgvector'],
-      ['find_products · get_order', 'Postgres'],
-      ['Answer + trace', 'sources, SQL, cost'],
+      ['Question', 'streamed chat', '“Do you have an iPhone 13? Can I return it?”'],
+      ['Agent loop', 'tool calling, max 5 steps', 'Decides it needs the policy and the stock.'],
+      ['search_docs', 'policies in pgvector', 'Finds the 30-day return policy.'],
+      ['find_products · get_order', 'Postgres', 'Finds iPhone 13 units in stock.'],
+      ['Answer + trace', 'sources, SQL, cost', 'Answers and cites the policy it used.'],
     ],
     decisions: [
       {
@@ -60,9 +61,9 @@ const levels: Level[] = [
       },
     ],
     failures: [
-      'Weak matches (<0.3 similarity) → “I don’t know”, not a guess.',
-      'Bad tool arguments go back to the model, not a crash.',
-      '5 steps per answer, 25 requests/hour per visitor.',
+      'Weak matches (<0.3 similarity) → **“I don’t know”**, not a guess.',
+      'Bad tool arguments **go back to the model**, not a crash.',
+      '**5 steps** per answer, **25 requests/hour** per visitor.',
     ],
     stack: ['Next.js', 'OpenAI', 'pgvector', 'Postgres', 'zod'],
     code: `${REPO}/src/lib/agent-demo`,
@@ -72,14 +73,14 @@ const levels: Level[] = [
     id: 'act',
     verb: 'Act',
     name: 'Act on the CRM, with approval',
-    plain: 'Qualifies a lead and prepares the CRM updates, then waits for a person to approve.',
+    plain: 'Qualifies a lead and prepares the CRM updates, then **waits for a person to approve**.',
     useWhen: 'the AI should take actions, but a wrong one costs money or customers.',
     pipeline: [
-      ['Qualify', 'intent, budget, score'],
-      ['Look up', 'CRM + inventory via MCP'],
-      ['Draft + propose', 'reply and actions'],
-      ['Approval', 'paused, state in Postgres'],
-      ['Execute', 'approved actions only'],
+      ['Qualify', 'intent, budget, score', '“iPhone 15 Pro today, 16,000 pesos.” Buyer, score 85.'],
+      ['Look up', 'CRM + inventory via MCP', 'Checks the contact and matching stock.'],
+      ['Draft + propose', 'reply and actions', 'Writes the reply and the CRM updates.'],
+      ['Approval', 'paused, state in Postgres', 'Stops here. A person reviews it.'],
+      ['Execute', 'approved actions only', 'Runs only what was approved.'],
     ],
     decisions: [
       {
@@ -99,9 +100,9 @@ const levels: Level[] = [
       },
     ],
     failures: [
-      'Tools outside the allow-list are rejected.',
-      'A restart mid-approval resumes from the checkpoint.',
-      'Cold starts are shown, not hidden.',
+      'Tools outside the allow-list are **rejected**.',
+      'A restart mid-approval **resumes from the checkpoint**.',
+      'Cold starts are **shown, not hidden**.',
     ],
     stack: ['Python', 'FastAPI', 'LangGraph', 'MCP', 'Postgres'],
     code: `${REPO}/services/lead-agent`,
@@ -114,7 +115,7 @@ export type SmallBuild = { name: string; plain: string; stack: string[]; href: s
 const smallBuilds: SmallBuild[] = [
   {
     name: 'Lead triage with n8n',
-    plain: 'Sorts incoming messages and sends serious buyers to the Lead agent. If a step fails, a person gets the lead.',
+    plain: 'Sorts incoming messages and sends serious buyers to the Lead agent. **If a step fails, a person gets the lead.**',
     stack: ['n8n', 'OpenAI', 'Webhooks'],
     href: `${REPO}/services/n8n-lead-triage`,
     image: '/builds/n8n-lead-triage.png',
@@ -125,14 +126,8 @@ const smallBuilds: SmallBuild[] = [
 const en = {
   role: 'Full-stack & AI Engineer',
   headline: 'I build AI agents that do real work — and stay under control.',
-  subhead: 'Three live systems. Try them.',
+  subhead: '**Three live systems.** Try them.',
   availability: 'Open to full-time · remote or CDMX',
-  proof: {
-    live: 'live systems',
-    listings: 'real listings tracked',
-    public: 'Open',
-    publicLabel: 'source code',
-  },
   ladder: {
     kicker: 'More responsibility at every step',
     hint: 'Click a step',
@@ -142,6 +137,7 @@ const en = {
   section: {
     useWhen: 'Use this when',
     howBuilt: 'How it’s built',
+    example: 'Example',
     decisions: 'Decisions',
     why: 'Why',
     tradeoff: 'Trade-off',
@@ -152,14 +148,14 @@ const en = {
   production: {
     kicker: '03 · In production',
     title: 'Resale Intelligence',
-    plain: 'The system I run my electronics resale business on. Real data, updated daily.',
+    plain: 'The system I run my electronics resale business on. **Real data, updated daily.**',
     pipeline: [
-      ['Chrome extension', 'captures listings'],
-      ['Ingest API', 'validated, deduped'],
-      ['Price model', 'deterministic code + SQL'],
-      ['Postgres', 'listings, price history'],
-      ['Agents', 'judgment only'],
-    ] as [string, string][],
+      ['Chrome extension', 'captures listings', 'Sees “iPhone 13 128GB, $6,500.”'],
+      ['Ingest API', 'validated, deduped', 'Saves it once, with its price.'],
+      ['Price model', 'deterministic code + SQL', 'Works out market price and max buy.'],
+      ['Postgres', 'listings, price history', 'Keeps it with its price history.'],
+      ['Agents', 'judgment only', 'Verdict: negotiate. Offer written.'],
+    ] as [string, string, string][],
     decisions: [
       {
         choice: 'Code for numbers, AI for judgment',
