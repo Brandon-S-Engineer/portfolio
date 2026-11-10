@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import SiteThemeToggle from '@/components/site/site-theme-toggle'
 import { site } from '@/content/site'
+import { TALK_EVENT, TalkPill } from '@/components/site/hiring/talk-button'
 
 // El home es de una sola vista: el menú salta a sus secciones. Las páginas de
 // agencia (/agency, /services, /solutions, /mvp-saas) se enlazan desde el footer.
@@ -19,6 +20,14 @@ export default function SiteNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const router = useRouter()
+  // En el home, avisa al botón del hero y sube a él; fuera, lleva al home.
+  const talk = () => {
+    setOpen(false)
+    if (pathname !== '/') return router.push('/#talk')
+    document.getElementById('talk')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.dispatchEvent(new Event(TALK_EVENT))
+  }
 
   return (
     <header
@@ -64,9 +73,9 @@ export default function SiteNav() {
           <div className='ml-1.5'>
             <SiteThemeToggle />
           </div>
-          <Link href='/#projects' className='site-btn site-btn-inverse ml-1.5 h-9 px-4 text-sm'>
-            Try the live systems
-          </Link>
+          <div className='ml-3'>
+            <TalkPill size='sm' onClick={talk} />
+          </div>
         </nav>
 
         <div className='flex items-center gap-1.5 md:hidden'>
@@ -96,12 +105,9 @@ export default function SiteNav() {
                 {l.label}
               </Link>
             ))}
-            <Link
-              href='/#projects'
-              onClick={() => setOpen(false)}
-              className='site-btn site-btn-inverse mt-2 h-10 px-4 text-sm'>
-              Try the live systems
-            </Link>
+            <div className='mt-3 mb-2 flex'>
+              <TalkPill size='sm' onClick={talk} />
+            </div>
           </nav>
         </div>
       )}

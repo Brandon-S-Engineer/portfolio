@@ -186,8 +186,8 @@ const en = {
     title: 'Let’s talk.',
   },
   talk: {
-    label: 'Talk to my portfolio',
     sub: 'EN · ES',
+    caption: 'Ask about my experience and projects, out loud, in English or Spanish.',
     pending: 'My voice agent is being tuned and goes live soon. Meanwhile, try the three systems below.',
   },
 }
