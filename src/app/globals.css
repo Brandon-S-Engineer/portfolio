@@ -421,25 +421,56 @@
     transform: scaleY(1);
   }
 }
+/* Escenario: niebla que se disuelve de claro (arriba) a casi negro (abajo),
+   con grano, en vez de un negro plano. */
 .talk-stage {
   position: relative;
   max-width: 540px;
-  padding: 26px 26px 22px;
+  padding: 84px 24px 28px;
   border-radius: 24px;
   overflow: hidden;
   isolation: isolate;
-  background:
-    radial-gradient(80% 120% at 0% 0%, oklch(0.42 0.16 270 / 0.55), transparent 60%),
-    radial-gradient(70% 120% at 100% 100%, oklch(0.45 0.14 220 / 0.35), transparent 60%),
-    oklch(0.17 0.03 266);
-  border: 1px solid oklch(1 0 0 / 0.08);
-  box-shadow: 0 20px 50px oklch(0.25 0.08 266 / 0.25);
+  text-align: center;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.93 0.004 260) 0%,
+    oklch(0.72 0.01 262) 24%,
+    oklch(0.36 0.014 264) 50%,
+    oklch(0.15 0.012 264) 76%,
+    oklch(0.1 0.01 264) 100%
+  );
+  box-shadow: 0 20px 50px oklch(0.2 0.02 264 / 0.22);
+}
+/* Humo: manchas irregulares que se apagan hacia abajo */
+.talk-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='260'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.05 0.013' numOctaves='6' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.05 0 0 0 0 0.07 0 0 0 2.6 -1.05'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E") center / 100% 100%;
+  opacity: 0.9;
+  mask-image: linear-gradient(to bottom, transparent 4%, black 30%, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 4%, black 30%, black 70%, transparent 100%);
+}
+/* Grano fino */
+.talk-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: 0.32;
+  mix-blend-mode: overlay;
+  pointer-events: none;
 }
 .dark .talk-stage {
-  background:
-    radial-gradient(80% 120% at 0% 0%, oklch(0.42 0.16 270 / 0.28), transparent 60%),
-    radial-gradient(70% 120% at 100% 100%, oklch(0.45 0.14 220 / 0.18), transparent 60%),
-    oklch(0.19 0.02 264);
+  background: linear-gradient(
+    to bottom,
+    oklch(0.42 0.012 262) 0%,
+    oklch(0.3 0.014 263) 25%,
+    oklch(0.2 0.014 264) 52%,
+    oklch(0.13 0.01 264) 100%
+  );
   box-shadow: none;
 }
 .talk-caption {
@@ -558,7 +589,7 @@
 }
 @media (max-width: 480px) {
   .talk-stage {
-    padding: 22px 18px 18px;
+    padding: 72px 14px 22px;
   }
   .talk-lg .talk-btn {
     padding: 0 10px 0 18px;
