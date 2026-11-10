@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowDown, ArrowUpRight, FileText, Mail, Phone } from 'lucide-react'
+import { ArrowUpRight, FileText, Mail, Phone } from 'lucide-react'
 import ResaleIntel from '@/components/site/resale/resale-intel'
 import { getMarketSnapshot } from '@/lib/resale/market'
 import CompanyAgentDemo from '@/components/site/company-agent-demo'
@@ -10,6 +10,7 @@ import LevelLadder from '@/components/site/hiring/level-ladder'
 import LevelSection from '@/components/site/hiring/level-section'
 import BuildDetails from '@/components/site/hiring/build-details'
 import Rich from '@/components/site/hiring/rich'
+import TalkButton from '@/components/site/hiring/talk-button'
 import { GitHubIcon, LinkedInIcon, WhatsAppIcon } from '@/components/site/brand-icons'
 import { LevelBars } from '@/components/site/demo-stage'
 import { hiringCopy } from '@/content/hiring'
@@ -30,13 +31,14 @@ export default async function HomePage() {
   const copy = hiringCopy.en
   const snapshot = await getMarketSnapshot()
   const { links: l } = site.hiring
+  // Marcas con su color oficial; GitHub hereda el color del texto (negro o blanco).
   const links = [
-    { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon },
-    { href: `tel:${l.phone}`, label: 'Call', icon: Phone },
-    { href: `mailto:${l.email}`, label: 'Email', icon: Mail },
-    { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon },
-    { href: l.github, label: 'GitHub', icon: GitHubIcon },
-    { href: l.cv, label: 'CV', icon: FileText },
+    { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366' },
+    { href: `tel:${l.phone}`, label: 'Call', icon: Phone, color: 'var(--accent)' },
+    { href: `mailto:${l.email}`, label: 'Email', icon: Mail, color: 'var(--accent)' },
+    { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon, color: '#0A66C2' },
+    { href: l.github, label: 'GitHub', icon: GitHubIcon, color: undefined },
+    { href: l.cv, label: 'CV', icon: FileText, color: 'var(--accent)' },
   ]
   // mailto y tel abren su app; lo demás, en otra pestaña.
   const opensTab = (href: string) => !/^(mailto|tel):/.test(href)
@@ -66,10 +68,7 @@ export default async function HomePage() {
             <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
               <Rich text={copy.subhead} />
             </p>
-            <a href='#projects' className='site-btn site-btn-accent mt-7 h-12 px-[22px] text-[15.5px]'>
-              {copy.cta}
-              <ArrowDown className='h-[17px] w-[17px]' />
-            </a>
+            <TalkButton label={copy.talk.label} sub={copy.talk.sub} pending={copy.talk.pending} />
           </div>
           <LevelLadder copy={copy} />
         </div>
@@ -83,7 +82,7 @@ export default async function HomePage() {
               {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
               className='site-lift flex flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
               style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-              <x.icon className='h-6 w-6' style={{ color: 'var(--accent)' }} />
+              <x.icon className='h-6 w-6' style={{ color: x.color }} />
               {x.label}
             </a>
           ))}

@@ -131,8 +131,8 @@ const en = {
   ladder: {
     kicker: 'More responsibility at every step',
     hint: 'Click a step',
-    production: 'In production',
-    productionName: 'Run a real business',
+    production: 'Decide',
+    productionName: 'Multi-agent, on real business data',
   },
   section: {
     useWhen: 'Use this when',
@@ -146,7 +146,7 @@ const en = {
   },
   levels,
   production: {
-    kicker: '03 · In production',
+    kicker: '03 · Decide · in production',
     title: 'Resale Intelligence',
     plain: 'The system I run my electronics resale business on. **Real data, updated daily.**',
     pipeline: [
@@ -185,7 +185,11 @@ const en = {
   contact: {
     title: 'Let’s talk.',
   },
-  cta: 'Try the live systems',
+  talk: {
+    label: 'Talk to my portfolio',
+    sub: 'EN · ES',
+    pending: 'My voice agent is being tuned and goes live soon. Meanwhile, try the three systems below.',
+  },
 }
 
 export type HiringCopy = typeof en
