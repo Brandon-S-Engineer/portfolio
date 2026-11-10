@@ -1,9 +1,10 @@
-import { ChevronDown, Code2 } from 'lucide-react'
+import { ChevronDown, Code2, Layers } from 'lucide-react'
 import type { Decision, HiringCopy } from '@/content/hiring'
 import PipelineFlow from './pipeline-flow'
 import Rich from './rich'
 
-// Capa técnica de cada sistema, abierta por defecto y con un ejemplo animado.
+// Capa técnica de cada sistema, con un ejemplo animado. Cerrada por defecto para
+// que la página se recorra rápido; el botón brilla para invitar a abrirla.
 // <details> nativo: se puede cerrar sin JS y es accesible por teclado.
 export default function BuildDetails({
   copy,
@@ -24,15 +25,26 @@ export default function BuildDetails({
 }) {
   const t = copy.section
   return (
-    <details
-      open
-      className='group mt-4 rounded-[18px]'
-      style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-      <summary className='flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden'>
-        <span className='site-display text-[16px] font-bold' style={{ letterSpacing: '-0.02em' }}>
-          {t.howBuilt}
+    <details className='site-built group mt-4 rounded-[18px]'>
+      <summary className='flex cursor-pointer list-none items-center gap-3.5 px-5 py-4 [&::-webkit-details-marker]:hidden'>
+        <span
+          className='grid h-10 w-10 shrink-0 place-items-center rounded-[11px]'
+          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+          <Layers className='h-5 w-5' />
         </span>
-        <ChevronDown className='h-4 w-4 shrink-0 transition-transform group-open:rotate-180' style={{ color: 'var(--muted)' }} />
+        <span className='min-w-0 flex-1'>
+          <span className='site-display block text-[16px] font-bold' style={{ letterSpacing: '-0.02em' }}>
+            {t.howBuilt}
+          </span>
+          <span className='block text-[13px] group-open:hidden' style={{ color: 'var(--muted)' }}>
+            {t.howBuiltHint}
+          </span>
+        </span>
+        <span className='site-btn site-btn-accent site-cta site-built-btn h-9 shrink-0 px-3.5 text-[13.5px]'>
+          <span className='group-open:hidden'>{t.open}</span>
+          <span className='hidden group-open:inline'>{t.close}</span>
+          <ChevronDown className='h-4 w-4 transition-transform group-open:rotate-180' />
+        </span>
       </summary>
 
       <div className='space-y-6 px-5 pb-6'>

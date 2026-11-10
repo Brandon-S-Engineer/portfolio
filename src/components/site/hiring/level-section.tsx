@@ -2,10 +2,11 @@ import type { ReactNode } from 'react'
 import type { HiringCopy, Level } from '@/content/hiring'
 import { LevelBars } from '@/components/site/demo-stage'
 import BuildDetails from './build-details'
+import Facts from './facts'
 import Rich from './rich'
 
 // Un sistema destacado: título y una línea arriba, la demo real en medio y
-// la capa técnica (ejemplo animado, decisiones, fallas) abierta abajo. Cada
+// la capa técnica (ejemplo animado, decisiones, fallas) cerrada abajo. Cada
 // sistema ocupa su propia banda a todo el ancho; las bandas alternan de fondo
 // para que se note dónde termina uno y empieza el otro.
 export default function LevelSection({
@@ -41,6 +42,7 @@ export default function LevelSection({
         <p className='mt-2 text-[16px]' style={{ lineHeight: 1.55 }}>
           <Rich text={level.plain} />
         </p>
+        <Facts items={level.facts} />
       </div>
       <div className='mt-6'>{children}</div>
       <BuildDetails

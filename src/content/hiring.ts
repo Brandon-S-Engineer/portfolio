@@ -19,6 +19,8 @@ export type Level = {
   name: string
   // Una frase, sin jerga: qué hace para el negocio.
   plain: string
+  // Tres datos duros del sistema: [dato, qué significa].
+  facts: [string, string][]
   useWhen: string
   // Paso, qué hace y qué pasa en un ejemplo.
   pipeline: [string, string, string][]
@@ -35,6 +37,11 @@ const levels: Level[] = [
     verb: 'Answer',
     name: 'Answer from company data',
     plain: 'Answers customers from the store’s policies and live orders, and **cites every source**.',
+    facts: [
+      ['3 tools', 'one loop, no framework'],
+      ['≤ 5 steps', 'per answer, then it stops'],
+      ['Every answer', 'cites its source'],
+    ],
     useWhen: 'the answers exist in documents or a database, but finding them takes a person.',
     pipeline: [
       ['Question', 'streamed chat', '“Do you have an iPhone 13? Can I return it?”'],
@@ -74,6 +81,11 @@ const levels: Level[] = [
     verb: 'Act',
     name: 'Act on the CRM, with approval',
     plain: 'Qualifies a lead and prepares the CRM updates, then **waits for a person to approve**.',
+    facts: [
+      ['6 steps', 'in one LangGraph run'],
+      ['0 writes', 'without human approval'],
+      ['Survives restarts', 'state saved in Postgres'],
+    ],
     useWhen: 'the AI should take actions, but a wrong one costs money or customers.',
     pipeline: [
       ['Qualify', 'intent, budget, score', '“iPhone 15 Pro today, 16,000 pesos.” Buyer, score 85.'],
@@ -127,6 +139,8 @@ const en = {
   role: 'Full-stack & AI Engineer',
   headline: 'I build AI agents that do real work — and stay under control.',
   subhead: '**Three live systems.** Try them.',
+  // Lo que un reclutador quiere saber antes de seguir leyendo.
+  about: '**Mexico City** (UTC−6) · **English C1** · **Python + TypeScript** · shipping client work since **2024**',
   availability: 'Open to full-time · remote or CDMX',
   ladder: {
     kicker: 'More responsibility at every step',
@@ -137,6 +151,10 @@ const en = {
   section: {
     useWhen: 'Use this when',
     howBuilt: 'How it’s built',
+    howBuiltHint: 'A worked example, the decisions and their trade-offs',
+    open: 'Open',
+    close: 'Close',
+    tracked: 'listings tracked',
     example: 'Example',
     decisions: 'Decisions',
     why: 'Why',
@@ -149,6 +167,11 @@ const en = {
     kicker: '03 · Decide · in production',
     title: 'Resale Intelligence',
     plain: 'The system I run my electronics resale business on. **Real listings, real prices.**',
+    // El primer dato (anuncios rastreados) sale en vivo de la base; ver page.tsx.
+    facts: [
+      ['4 LLM agents', 'spec, market, risk, lead'],
+      ['< 5 s · $0.001', 'per deal scored'],
+    ] as [string, string][],
     pipeline: [
       ['Chrome extension', 'captures listings', 'Sees “iPhone 13 128GB, $6,500.”'],
       ['Ingest API', 'validated, deduped', 'Saves it once, with its price.'],

@@ -1,7 +1,7 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ComponentType, CSSProperties, ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight, FileText, Mail, Phone } from 'lucide-react'
+import { ArrowUpRight, Download, FileText, Mail, Phone } from 'lucide-react'
 import ResaleIntel from '@/components/site/resale/resale-intel'
 import { getMarketSnapshot } from '@/lib/resale/market'
 import CompanyAgentDemo from '@/components/site/company-agent-demo'
@@ -10,6 +10,7 @@ import LevelLadder from '@/components/site/hiring/level-ladder'
 import LevelSection from '@/components/site/hiring/level-section'
 import BuildDetails from '@/components/site/hiring/build-details'
 import Rich from '@/components/site/hiring/rich'
+import Facts from '@/components/site/hiring/facts'
 import TalkButton from '@/components/site/hiring/talk-button'
 import { GitHubIcon, LinkedInIcon, WhatsAppIcon } from '@/components/site/brand-icons'
 import { LevelBars } from '@/components/site/demo-stage'
@@ -24,6 +25,38 @@ const DEMOS: Record<string, ReactNode> = {
   act: <LeadAgentDemo />,
 }
 
+type ContactLink = {
+  href: string
+  label: string
+  icon: ComponentType<{ className?: string; style?: CSSProperties }>
+  color?: string
+  // Lo que se ve al pasar el ratón: el dato, por si prefieren copiarlo.
+  detail?: string
+  options?: { label: string; href: string; download?: boolean }[]
+}
+
+// mailto y tel abren su app; lo demás, en otra pestaña.
+const tabProps = (href: string) => (/^(mailto|tel):/.test(href) ? {} : { target: '_blank', rel: 'noreferrer' })
+
+// Burbuja del hover: el número, el correo o el usuario (seleccionable para
+// copiar). El CV ofrece verlo o descargarlo. El clic del botón no cambia.
+function Tip({ x, inverse = false }: { x: ContactLink; inverse?: boolean }) {
+  return (
+    <span className={`site-tip ${inverse ? 'site-tip-inv' : ''}`}>
+      <span className='site-tip-in'>
+        {x.options
+          ? x.options.map((o) => (
+              <a key={o.label} href={o.href} {...(o.download ? { download: true } : tabProps(o.href))} className='site-tip-opt'>
+                {o.download ? <Download className='h-3.5 w-3.5' /> : <ArrowUpRight className='h-3.5 w-3.5' />}
+                {o.label}
+              </a>
+            ))
+          : x.detail}
+      </span>
+    </span>
+  )
+}
+
 // Los datos del mercado de reventa se cachean 30 min (ver lib/resale/market).
 export const revalidate = 1800
 
@@ -32,16 +65,25 @@ export default async function HomePage() {
   const snapshot = await getMarketSnapshot()
   const { links: l } = site.hiring
   // Marcas con su color oficial; lo demás hereda el color del texto (negro o blanco).
-  const links = [
-    { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366' },
-    { href: `tel:${l.phone}`, label: 'Call', icon: Phone, color: undefined },
-    { href: `mailto:${l.email}`, label: 'Email', icon: Mail, color: undefined },
-    { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon, color: '#0A66C2' },
-    { href: l.github, label: 'GitHub', icon: GitHubIcon, color: undefined },
-    { href: l.cv, label: 'CV', icon: FileText, color: undefined },
+  // +525516516493 → +52 55 1651 6493
+  const phone = l.phone.replace(/^(\+\d{2})(\d{2})(\d{4})(\d{4})$/, '$1 $2 $3 $4')
+  const handle = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+  const links: ContactLink[] = [
+    { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366', detail: phone },
+    { href: `tel:${l.phone}`, label: 'Call', icon: Phone, detail: phone },
+    { href: `mailto:${l.email}`, label: 'Email', icon: Mail, detail: l.email },
+    { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon, color: '#0A66C2', detail: handle(l.linkedin) },
+    { href: l.github, label: 'GitHub', icon: GitHubIcon, detail: handle(l.github) },
+    {
+      href: l.cv,
+      label: 'CV',
+      icon: FileText,
+      options: [
+        { label: 'Live link', href: l.cv },
+        { label: 'Download', href: l.cv, download: true },
+      ],
+    },
   ]
-  // mailto y tel abren su app; lo demás, en otra pestaña.
-  const opensTab = (href: string) => !/^(mailto|tel):/.test(href)
 
   const p = copy.production
 
@@ -72,6 +114,9 @@ export default async function HomePage() {
               <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
                 <Rich text={copy.subhead} />
               </p>
+              <p className='mt-3 max-w-[54ch] text-[14px]' style={{ lineHeight: 1.6, color: 'var(--muted)' }}>
+                <Rich text={copy.about} strong='var(--fg)' />
+              </p>
               <TalkButton sub={copy.talk.sub} caption={copy.talk.caption} pending={copy.talk.pending} />
             </div>
             <LevelLadder copy={copy} />
@@ -83,15 +128,17 @@ export default async function HomePage() {
       <section className='mx-auto max-w-[1120px] px-6 py-10'>
         <div className='grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3'>
           {links.map((x) => (
-            <a
-              key={x.label}
-              href={x.href}
-              {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
-              className='site-lift site-contact flex flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
-              style={{ background: 'var(--card)', border: '1px solid var(--border)', '--brand': x.color } as CSSProperties}>
-              <x.icon className='site-contact-icon h-6 w-6' style={{ color: x.color }} />
-              {x.label}
-            </a>
+            <div key={x.label} className='site-tip-host relative flex'>
+              <a
+                href={x.href}
+                {...tabProps(x.href)}
+                className='site-lift site-contact flex flex-1 flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
+                style={{ background: 'var(--card)', border: '1px solid var(--border)', '--brand': x.color } as CSSProperties}>
+                <x.icon className='site-contact-icon h-6 w-6' style={{ color: x.color }} />
+                {x.label}
+              </a>
+              <Tip x={x} />
+            </div>
           ))}
         </div>
       </section>
@@ -119,6 +166,12 @@ export default async function HomePage() {
           <p className='mt-2 text-[16px]' style={{ lineHeight: 1.55 }}>
             <Rich text={p.plain} />
           </p>
+          <Facts
+            items={[
+              ...(snapshot ? [[`${Math.floor(snapshot.totals.tracked / 1000)},000+`, copy.section.tracked] as [string, string]] : []),
+              ...p.facts,
+            ]}
+          />
         </div>
         <div className='mt-6 overflow-hidden rounded-[20px]' style={{ border: '1px solid var(--border)', background: 'var(--bg)' }}>
           <div className='flex items-center gap-3 px-4 py-2.5' style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
@@ -218,15 +271,17 @@ export default async function HomePage() {
             </p>
             <div className='mt-8 flex flex-wrap justify-center gap-3'>
               {links.map((x) => (
-                <a
-                  key={x.label}
-                  href={x.href}
-                  {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
-                  className='site-btn site-talk-link h-[50px] px-[22px] text-[15px]'
-                  style={{ '--brand': x.color } as CSSProperties}>
-                  <x.icon className='site-contact-icon h-[18px] w-[18px]' />
-                  {x.label}
-                </a>
+                <span key={x.label} className='site-tip-host relative inline-flex'>
+                  <a
+                    href={x.href}
+                    {...tabProps(x.href)}
+                    className='site-btn site-talk-link h-[50px] px-[22px] text-[15px]'
+                    style={{ '--brand': x.color } as CSSProperties}>
+                    <x.icon className='site-contact-icon h-[18px] w-[18px]' />
+                    {x.label}
+                  </a>
+                  <Tip x={x} inverse />
+                </span>
               ))}
             </div>
           </div>
