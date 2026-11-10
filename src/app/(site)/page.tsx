@@ -47,34 +47,41 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* HERO: quién soy + la escalera completa en una vista */}
-      <section className='mx-auto max-w-[1120px] px-6 pt-14 pb-8 sm:pt-20'>
-        <div className='grid items-end gap-12 lg:grid-cols-[1.05fr_0.95fr]'>
-          <div className='site-rise'>
-            <span
-              className='inline-flex items-center gap-2.5 rounded-full py-1.5 pr-3 pl-2.5 text-[12.5px]'
-              style={{ border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--muted)' }}>
-              <span className='site-pulse h-[7px] w-[7px] rounded-full' style={{ background: 'var(--live)' }} />
-              {copy.availability}
-            </span>
-            <p className='site-mono mt-6 text-[13px]' style={{ color: 'var(--muted)' }}>
-              {site.name} · {copy.role}
-            </p>
-            <h1
-              className='site-display mt-3 font-bold'
-              style={{ fontSize: 'clamp(34px,4.6vw,54px)', lineHeight: 1.05, letterSpacing: '-0.035em', textWrap: 'balance' }}>
-              {copy.headline}
-            </h1>
-            <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
-              <Rich text={copy.subhead} />
-            </p>
-            <TalkButton sub={copy.talk.sub} caption={copy.talk.caption} pending={copy.talk.pending} />
+      {/* HERO: siempre oscuro (en tema claro también), para que el botón de voz
+          brille. Los escalones siguen claros en tema claro. */}
+      <div className='site-night'>
+        <section className='mx-auto max-w-[1120px] px-6 pt-8 pb-16 sm:pt-10'>
+          <div className='grid items-end gap-12 lg:grid-cols-[1.05fr_0.95fr]'>
+            <div className='site-rise'>
+              <div className='flex flex-wrap items-center gap-x-3 gap-y-2 lg:w-max lg:flex-nowrap'>
+                <p className='site-mono text-[12.5px] whitespace-nowrap' style={{ color: 'var(--muted)' }}>
+                  {site.name} · {copy.role}
+                </p>
+                <span
+                  className='inline-flex items-center gap-1.5 rounded-full py-[3px] pr-2.5 pl-2 text-[12px] whitespace-nowrap'
+                  style={{ border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--muted)' }}>
+                  <span className='site-pulse h-[7px] w-[7px] rounded-full' style={{ background: 'var(--live)' }} />
+                  {copy.availability}
+                </span>
+              </div>
+              <h1
+                className='site-display mt-4 font-bold'
+                style={{ fontSize: 'clamp(34px,4.6vw,54px)', lineHeight: 1.05, letterSpacing: '-0.035em', textWrap: 'balance' }}>
+                {copy.headline}
+              </h1>
+              <p className='mt-5 max-w-[54ch] text-[17px]' style={{ lineHeight: 1.55, color: 'var(--muted)', textWrap: 'pretty' }}>
+                <Rich text={copy.subhead} />
+              </p>
+              <TalkButton sub={copy.talk.sub} caption={copy.talk.caption} pending={copy.talk.pending} />
+            </div>
+            <LevelLadder copy={copy} />
           </div>
-          <LevelLadder copy={copy} />
-        </div>
+        </section>
+      </div>
 
-        {/* LINKS: el contacto a un clic */}
-        <div className='mt-12 grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3'>
+      {/* LINKS: el contacto a un clic */}
+      <section className='mx-auto max-w-[1120px] px-6 pt-10'>
+        <div className='grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3'>
           {links.map((x) => (
             <a
               key={x.label}

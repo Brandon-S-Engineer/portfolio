@@ -155,7 +155,9 @@
    Scoped to .site-theme so the dashboard's shadcn tokens stay untouched.
    Light tokens on .site-theme; dark tokens on .dark .site-theme (next-themes).
    ========================================================================== */
-.site-theme {
+/* .site-day: piezas que siguen claras dentro de una sección nocturna (solo en tema claro). */
+.site-theme,
+html:not(.dark) .site-day {
   /* Neutros fríos (sin tinte cálido) y un azul de marca. */
   --bg: oklch(0.985 0.003 255);
   --bg-2: oklch(0.965 0.005 255);
@@ -178,7 +180,9 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.dark .site-theme {
+/* .site-night: sección siempre oscura, en cualquier tema. */
+.dark .site-theme,
+.site-night {
   --bg: oklch(0.165 0.012 260);
   --bg-2: oklch(0.2 0.014 260);
   --card: oklch(0.215 0.015 260);
@@ -193,6 +197,11 @@
   --code-bg: oklch(0.235 0.015 260);
   --code-fg: oklch(0.82 0.01 255);
   --shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 12px 40px oklch(0 0 0 / 0.35);
+}
+
+.site-night {
+  background: var(--bg);
+  color: var(--fg);
 }
 
 .site-theme ::selection {
@@ -432,7 +441,8 @@
   --sky: oklch(0.2 0.05 270);
   --star-out: oklch(0.55 0.09 262);
 }
-.dark .talk-stage {
+.dark .talk-stage,
+.site-night .talk-stage {
   --sky: oklch(0.1 0.03 268);
   --star-out: oklch(0.85 0.03 260);
 }
@@ -454,7 +464,8 @@
       transparent 100%
     );
 }
-.dark .talk-sky {
+.dark .talk-sky,
+.site-night .talk-sky {
   background:
     radial-gradient(ellipse 34% 40% at 34% 46%, oklch(0.42 0.17 292 / 0.22), transparent 100%),
     radial-gradient(ellipse 32% 38% at 68% 56%, oklch(0.45 0.14 240 / 0.2), transparent 100%),

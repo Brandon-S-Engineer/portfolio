@@ -21,7 +21,7 @@ export default function LevelLadder({ copy }: { copy: HiringCopy }) {
             key={s.id}
             href={`#${s.id}`}
             aria-label={`${i + 1}: ${s.name}`}
-            className={`site-lift flex flex-col rounded-t-2xl rounded-b-md p-2.5 sm:p-4 ${STEP_H[i]}`}
+            className={`site-day site-lift flex flex-col rounded-t-2xl rounded-b-md p-2.5 sm:p-4 ${STEP_H[i]}`}
             style={{
               background: 'var(--card)',
               border: s.top ? '1px solid var(--accent)' : '1px solid var(--border)',
