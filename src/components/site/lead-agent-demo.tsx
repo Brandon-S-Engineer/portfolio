@@ -226,7 +226,7 @@ export default function LeadAgentDemo() {
                 type='button'
                 disabled={busy}
                 onClick={() => setForm(p)}
-                className='rounded-full px-3 py-1 text-[12.5px] disabled:opacity-50'
+                className='site-pick rounded-full px-3 py-1 text-[12.5px] disabled:opacity-50'
                 style={{
                   border: '1px solid var(--border)',
                   background: form.label === p.label ? 'var(--accent-soft)' : 'transparent',
@@ -269,7 +269,7 @@ export default function LeadAgentDemo() {
             type='button'
             onClick={run}
             disabled={busy || awake === 'down' || form.message.trim().length < 3 || form.contact.trim().length < 5}
-            className='site-btn site-btn-accent mt-2 h-11 w-full justify-center text-[14.5px] disabled:opacity-50'>
+            className='site-btn site-btn-accent site-cta mt-2 h-11 w-full justify-center text-[14.5px] disabled:opacity-50'>
             {phase === 'running' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}
             Run the agent
           </button>

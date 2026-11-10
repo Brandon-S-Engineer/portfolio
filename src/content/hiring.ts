@@ -148,7 +148,7 @@ const en = {
   production: {
     kicker: '03 · Decide · in production',
     title: 'Resale Intelligence',
-    plain: 'The system I run my electronics resale business on. **Real data, updated daily.**',
+    plain: 'The system I run my electronics resale business on. **Real listings, real prices.**',
     pipeline: [
       ['Chrome extension', 'captures listings', 'Sees “iPhone 13 128GB, $6,500.”'],
       ['Ingest API', 'validated, deduped', 'Saves it once, with its price.'],

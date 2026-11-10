@@ -5,10 +5,23 @@ import BuildDetails from './build-details'
 import Rich from './rich'
 
 // Un sistema destacado: título y una línea arriba, la demo real en medio y
-// la capa técnica (ejemplo animado, decisiones, fallas) abierta abajo.
-export default function LevelSection({ copy, level, children }: { copy: HiringCopy; level: Level; children?: ReactNode }) {
+// la capa técnica (ejemplo animado, decisiones, fallas) abierta abajo. Cada
+// sistema ocupa su propia banda a todo el ancho; las bandas alternan de fondo
+// para que se note dónde termina uno y empieza el otro.
+export default function LevelSection({
+  copy,
+  level,
+  band = false,
+  children,
+}: {
+  copy: HiringCopy
+  level: Level
+  band?: boolean
+  children?: ReactNode
+}) {
   return (
-    <section id={level.id} className='scroll-mt-20 pt-16'>
+    <section id={level.id} className={`scroll-mt-14 ${band ? 'site-band' : ''}`}>
+      <div className='mx-auto max-w-[1120px] px-6 py-16 sm:py-20'>
       <div className='max-w-[68ch]'>
         <div className='flex items-center gap-2.5'>
           <LevelBars tier={level.step} of={3} />
@@ -39,6 +52,7 @@ export default function LevelSection({ copy, level, children }: { copy: HiringCo
         stack={level.stack}
         code={level.code}
       />
+      </div>
     </section>
   )
 }

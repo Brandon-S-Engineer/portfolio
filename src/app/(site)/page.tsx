@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight, FileText, Mail, Phone } from 'lucide-react'
@@ -31,14 +31,14 @@ export default async function HomePage() {
   const copy = hiringCopy.en
   const snapshot = await getMarketSnapshot()
   const { links: l } = site.hiring
-  // Marcas con su color oficial; GitHub hereda el color del texto (negro o blanco).
+  // Marcas con su color oficial; lo demás hereda el color del texto (negro o blanco).
   const links = [
     { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366' },
-    { href: `tel:${l.phone}`, label: 'Call', icon: Phone, color: 'var(--accent)' },
-    { href: `mailto:${l.email}`, label: 'Email', icon: Mail, color: 'var(--accent)' },
+    { href: `tel:${l.phone}`, label: 'Call', icon: Phone, color: undefined },
+    { href: `mailto:${l.email}`, label: 'Email', icon: Mail, color: undefined },
     { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon, color: '#0A66C2' },
     { href: l.github, label: 'GitHub', icon: GitHubIcon, color: undefined },
-    { href: l.cv, label: 'CV', icon: FileText, color: 'var(--accent)' },
+    { href: l.cv, label: 'CV', icon: FileText, color: undefined },
   ]
   // mailto y tel abren su app; lo demás, en otra pestaña.
   const opensTab = (href: string) => !/^(mailto|tel):/.test(href)
@@ -80,16 +80,16 @@ export default async function HomePage() {
       </div>
 
       {/* LINKS: el contacto a un clic */}
-      <section className='mx-auto max-w-[1120px] px-6 pt-10'>
+      <section className='mx-auto max-w-[1120px] px-6 py-10'>
         <div className='grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3'>
           {links.map((x) => (
             <a
               key={x.label}
               href={x.href}
               {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
-              className='site-lift flex flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
-              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-              <x.icon className='h-6 w-6' style={{ color: x.color }} />
+              className='site-lift site-contact flex flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
+              style={{ background: 'var(--card)', border: '1px solid var(--border)', '--brand': x.color } as CSSProperties}>
+              <x.icon className='site-contact-icon h-6 w-6' style={{ color: x.color }} />
               {x.label}
             </a>
           ))}
@@ -97,16 +97,17 @@ export default async function HomePage() {
       </section>
 
       {/* LEVELS */}
-      <section id='projects' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-16'>
-        {copy.levels.map((lv) => (
-          <LevelSection key={lv.id} copy={copy} level={lv}>
+      <div id='projects' className='scroll-mt-14'>
+        {copy.levels.map((lv, i) => (
+          <LevelSection key={lv.id} copy={copy} level={lv} band={i % 2 === 0}>
             {DEMOS[lv.id]}
           </LevelSection>
         ))}
-      </section>
+      </div>
 
       {/* IN PRODUCTION: el sistema real, embebido */}
-      <section id='production' className='mx-auto max-w-[1120px] scroll-mt-20 px-6 pt-24'>
+      <section id='production' className={`scroll-mt-14 ${copy.levels.length % 2 === 0 ? 'site-band' : ''}`}>
+        <div className='mx-auto max-w-[1120px] px-6 py-16 sm:py-20'>
         <div className='max-w-[68ch]'>
           <div className='flex items-center gap-2.5'>
             <LevelBars tier={3} of={3} />
@@ -143,6 +144,7 @@ export default async function HomePage() {
         <p className='site-mono mt-4 text-[12px]' style={{ color: 'var(--muted)' }}>
           {p.next}
         </p>
+        </div>
       </section>
 
       {/* SMALLER BUILDS: se muestra cuando haya alguna */}
@@ -220,9 +222,9 @@ export default async function HomePage() {
                   key={x.label}
                   href={x.href}
                   {...(opensTab(x.href) ? { target: '_blank', rel: 'noreferrer' } : {})}
-                  className='site-btn h-[50px] px-[22px] text-[15px]'
-                  style={{ background: 'transparent', color: 'var(--bg)', border: '1px solid color-mix(in oklch, var(--bg) 40%, transparent)' }}>
-                  <x.icon className='h-4 w-4' />
+                  className='site-btn site-talk-link h-[50px] px-[22px] text-[15px]'
+                  style={{ '--brand': x.color } as CSSProperties}>
+                  <x.icon className='site-contact-icon h-[18px] w-[18px]' />
                   {x.label}
                 </a>
               ))}

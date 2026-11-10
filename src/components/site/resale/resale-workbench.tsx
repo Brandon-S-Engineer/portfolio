@@ -107,7 +107,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
                   type='button'
                   disabled={running}
                   onClick={() => evaluate({ listingId: o.id }, o.id)}
-                  className='w-full rounded-[10px] px-3 py-2 text-left disabled:cursor-wait'
+                  className='site-pick w-full rounded-[10px] px-3 py-2 text-left disabled:cursor-wait'
                   style={{
                     background: isSel ? 'var(--accent-soft)' : 'var(--bg-2)',
                     border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
@@ -150,7 +150,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
               type='button'
               disabled={running}
               onClick={() => evaluate({ text: text.trim() || SAMPLE }, 'text')}
-              className='site-btn site-btn-accent h-10 flex-1 justify-center text-[14px] disabled:opacity-50'>
+              className='site-btn site-btn-accent site-cta h-10 flex-1 justify-center text-[14px] disabled:opacity-50'>
               {running && selected === 'text' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Sparkles className='h-4 w-4' />}
               Evaluate {text.trim() ? 'listing' : 'the sample'}
             </button>

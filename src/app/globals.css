@@ -639,6 +639,107 @@ html:not(.dark) .site-day {
   background: radial-gradient(70px circle at var(--mx, 50%) var(--my, 50%), oklch(0.78 0.17 var(--talk-hue) / 0.55), transparent 70%);
 }
 
+/* Bandas: cada sistema del home ocupa una franja a todo el ancho y las franjas
+   alternan de fondo, para que se note dónde termina uno y empieza el otro. */
+.site-theme {
+  --band: oklch(0.945 0.014 262);
+}
+.dark .site-theme {
+  --band: oklch(0.125 0.014 262);
+}
+.site-band {
+  background: var(--band);
+  border-block: 1px solid var(--border);
+}
+
+/* Botón principal de cada demo: brillo que respira y un destello que cruza.
+   Llama a apretarlo, sin competir con el botón de voz del hero. */
+@keyframes ctaGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 50%, transparent), 0 6px 20px -8px var(--accent);
+  }
+  55% {
+    box-shadow: 0 0 0 7px transparent, 0 8px 26px -6px var(--accent);
+  }
+}
+@keyframes ctaSheen {
+  0%,
+  62% {
+    transform: translateX(-140%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(340%) skewX(-20deg);
+  }
+}
+.site-cta {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.site-cta:not(:disabled) {
+  animation: ctaGlow 2.6s ease-in-out infinite;
+}
+.site-cta:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.38), transparent);
+  transform: translateX(-140%) skewX(-20deg);
+  animation: ctaSheen 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.site-cta:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+.site-cta:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Opciones elegibles dentro de las demos (preguntas, presets, anuncios). */
+.site-pick {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.site-pick:not(:disabled):hover {
+  border-color: var(--accent) !important;
+  transform: translateX(2px);
+}
+
+/* Contacto: el ícono crece y el borde toma el color de la marca. */
+.site-contact-icon {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.site-contact:hover {
+  border-color: var(--brand, var(--fg));
+  box-shadow: 0 10px 26px -14px var(--brand, var(--fg));
+}
+.site-contact:hover .site-contact-icon {
+  transform: scale(1.14) translateY(-1px);
+}
+
+/* Botones de "Let's talk" (sobre fondo invertido): al pasar el ratón se
+   rellenan, suben y el ícono toma el color de su marca. */
+.site-talk-link {
+  background: transparent;
+  color: var(--bg);
+  border-color: color-mix(in oklch, var(--bg) 35%, transparent);
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.site-talk-link:hover {
+  background: var(--bg);
+  color: var(--fg);
+  border-color: var(--bg);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -12px oklch(0 0 0 / 0.55);
+}
+.site-talk-link:hover .site-contact-icon {
+  color: var(--brand, currentColor);
+  transform: scale(1.18);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-rise,
   .site-rise-delay,
@@ -646,6 +747,8 @@ html:not(.dark) .site-day {
   .site-blink,
   .site-pulse,
   .site-attn,
+  .site-cta,
+  .site-cta::after,
   .talk-aura,
   .talk-btn,
   .talk-star,

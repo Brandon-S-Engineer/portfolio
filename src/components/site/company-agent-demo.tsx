@@ -31,7 +31,8 @@ const toolIcon = { search_docs: FileSearch, find_products: Database, get_order: 
 export default function CompanyAgentDemo() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [trace, setTrace] = useState<TraceEvent[]>([])
-  const [input, setInput] = useState('')
+  // Como en los otros dos sistemas: ya hay algo elegido, solo falta apretar.
+  const [input, setInput] = useState(suggestedQuestions[0])
   const [busy, setBusy] = useState(false)
   const [model, setModel] = useState('gpt-4.1-mini')
   const [streaming, setStreaming] = useState('')
@@ -115,6 +116,7 @@ export default function CompanyAgentDemo() {
               onClick={() => {
                 setMessages([])
                 setTrace([])
+                setInput(suggestedQuestions[0])
               }}
               className='inline-flex items-center gap-1 text-[12.5px]'
               style={{ color: 'var(--muted)' }}>
@@ -127,16 +129,21 @@ export default function CompanyAgentDemo() {
           {messages.length === 0 && (
             <div>
               <p className='text-[14px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-                Volt Mobile, a demo phone store. Ask anything — try to make it hallucinate:
+                Volt Mobile, a demo phone store. Pick a question or write your own, then press <b style={{ color: 'var(--fg)' }}>Ask</b>. Try to make it hallucinate.
               </p>
               <div className='mt-4 flex flex-col gap-2'>
                 {suggestedQuestions.map((q) => (
                   <button
                     key={q}
                     type='button'
-                    onClick={() => ask(q)}
-                    className='rounded-[12px] px-3.5 py-2.5 text-left text-[13.5px] transition-colors hover:opacity-80'
-                    style={{ border: '1px solid var(--border)', background: 'var(--bg-2)' }}>
+                    onClick={() => setInput(q)}
+                    aria-pressed={input === q}
+                    className='site-pick rounded-[12px] px-3.5 py-2.5 text-left text-[13.5px]'
+                    style={
+                      input === q
+                        ? { border: '1px solid var(--accent)', background: 'var(--accent-soft)' }
+                        : { border: '1px solid var(--border)', background: 'var(--bg-2)' }
+                    }>
                     {q}
                   </button>
                 ))}
@@ -205,7 +212,8 @@ export default function CompanyAgentDemo() {
             type='submit'
             disabled={busy || !input.trim()}
             aria-label='Send'
-            className='site-btn site-btn-accent h-11 w-11 shrink-0 justify-center p-0 disabled:opacity-50'>
+            className='site-btn site-btn-accent site-cta h-11 shrink-0 justify-center px-4 text-[14.5px] disabled:opacity-50'>
+            Ask
             <ArrowUp className='h-[18px] w-[18px]' />
           </button>
         </form>
