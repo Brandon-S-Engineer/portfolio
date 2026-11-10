@@ -421,57 +421,58 @@
     transform: scaleY(1);
   }
 }
-/* Escenario: niebla que se disuelve de claro (arriba) a casi negro (abajo),
-   con grano, en vez de un negro plano. */
+/* Escenario: cielo nocturno sin bordes. Una zona oscura ovalada que se funde
+   con la página, y estrellas que se salen de ella. */
 .talk-stage {
   position: relative;
   max-width: 540px;
-  padding: 84px 24px 28px;
-  border-radius: 24px;
-  overflow: hidden;
-  isolation: isolate;
+  padding: 64px 24px 56px;
   text-align: center;
-  background: linear-gradient(
-    to bottom,
-    oklch(0.93 0.004 260) 0%,
-    oklch(0.72 0.01 262) 24%,
-    oklch(0.36 0.014 264) 50%,
-    oklch(0.15 0.012 264) 76%,
-    oklch(0.1 0.01 264) 100%
-  );
-  box-shadow: 0 20px 50px oklch(0.2 0.02 264 / 0.22);
-}
-/* Humo: manchas irregulares que se apagan hacia abajo */
-.talk-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='260'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.05 0.013' numOctaves='6' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.05 0 0 0 0 0.07 0 0 0 2.6 -1.05'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E") center / 100% 100%;
-  opacity: 0.9;
-  mask-image: linear-gradient(to bottom, transparent 4%, black 30%, black 70%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 4%, black 30%, black 70%, transparent 100%);
-}
-/* Grano fino */
-.talk-stage::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  opacity: 0.32;
-  mix-blend-mode: overlay;
-  pointer-events: none;
+  isolation: isolate;
+  --sky: oklch(0.2 0.05 270);
+  --star-out: oklch(0.55 0.09 262);
 }
 .dark .talk-stage {
-  background: linear-gradient(
-    to bottom,
-    oklch(0.42 0.012 262) 0%,
-    oklch(0.3 0.014 263) 25%,
-    oklch(0.2 0.014 264) 52%,
-    oklch(0.13 0.01 264) 100%
-  );
-  box-shadow: none;
+  --sky: oklch(0.1 0.03 268);
+  --star-out: oklch(0.85 0.03 260);
+}
+.talk-sky {
+  position: absolute;
+  inset: -40px -90px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 34% 40% at 34% 46%, oklch(0.42 0.17 292 / 0.55), transparent 100%),
+    radial-gradient(ellipse 32% 38% at 68% 56%, oklch(0.45 0.14 240 / 0.5), transparent 100%),
+    radial-gradient(
+      ellipse closest-side,
+      var(--sky) 0%,
+      var(--sky) 46%,
+      color-mix(in srgb, var(--sky) 82%, transparent) 60%,
+      color-mix(in srgb, var(--sky) 45%, transparent) 74%,
+      color-mix(in srgb, var(--sky) 15%, transparent) 88%,
+      transparent 100%
+    );
+}
+.dark .talk-sky {
+  background:
+    radial-gradient(ellipse 34% 40% at 34% 46%, oklch(0.42 0.17 292 / 0.22), transparent 100%),
+    radial-gradient(ellipse 32% 38% at 68% 56%, oklch(0.45 0.14 240 / 0.2), transparent 100%),
+    radial-gradient(ellipse closest-side, var(--sky) 0%, var(--sky) 45%, transparent 100%);
+}
+.talk-star {
+  position: absolute;
+  border-radius: 999px;
+  animation: talkTwinkle var(--tw, 4s) ease-in-out infinite;
+}
+@keyframes talkTwinkle {
+  0%,
+  100% {
+    opacity: var(--o, 1);
+  }
+  50% {
+    opacity: calc(var(--o, 1) * 0.25);
+  }
 }
 .talk-caption {
   min-height: 20px;
@@ -589,7 +590,10 @@
 }
 @media (max-width: 480px) {
   .talk-stage {
-    padding: 72px 14px 22px;
+    padding: 60px 0 72px;
+  }
+  .talk-sky {
+    inset: -30px -24px;
   }
   .talk-lg .talk-btn {
     padding: 0 10px 0 18px;
@@ -633,6 +637,7 @@
   .site-attn,
   .talk-aura,
   .talk-btn,
+  .talk-star,
   .talk-bars span {
     animation: none;
   }

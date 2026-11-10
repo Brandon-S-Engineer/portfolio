@@ -35,7 +35,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     <div
       className={`${spaceGrotesk.variable} ${onest.variable} ${jetbrainsMono.variable} site-theme flex min-h-screen flex-col`}>
       <SiteNav />
-      <main className='flex-1'>{children}</main>
+      <main className='flex-1 overflow-x-clip'>{children}</main>
       <SiteFooter />
     </div>
   )
