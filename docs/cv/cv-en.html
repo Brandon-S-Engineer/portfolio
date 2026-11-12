@@ -22,9 +22,10 @@
 
 <h2>Experience</h2>
 <div class="item">
-  <div class="head"><b>AI Engineer — Resale Intelligence (own product)</b><span class="when">2026 – Present</span></div>
+  <div class="head"><b>AI Engineer — Resale Intelligence (independent project)</b><span class="when">2026 – Present</span></div>
   <ul>
     <li>Tracked <b>16,000+ electronics listings</b> by building a Chrome extension, ingest API and Postgres pipeline.</li>
+    <li>Built a <b>price model from real listings</b> (P25–P75 bands per model, <b>18,000+ price changes</b> logged), so every deal shows its expected margin.</li>
     <li>Scored deals in <b>under 5 s and $0.001 each</b> by orchestrating <b>4 LLM agents</b> (spec, market, risk, lead).</li>
     <li>Set max-buy prices in code and SQL, with <b>guardrails that overrule any LLM verdict</b> contradicting them.</li>
   </ul>
@@ -32,23 +33,29 @@
 <div class="item">
   <div class="head"><b>Freelance Full-stack Developer</b><span class="when">2024 – Present</span></div>
   <ul>
-    <li>Built a car sales site and <b>AI CRM</b> for a dealership advisor (<a href="https://cars-lac-omega.vercel.app/">https://cars-lac-omega.vercel.app</a>): a Chrome extension syncs <b>8 inventory sheets</b> and an <b>LLM chat with tool calling</b> answers stock questions.</li>
+    <li><b>Admin dashboard:</b> built the system clients use to manage users, products and orders, with <b>JWT auth, role-based access</b>, validated forms, charts and paginated tables. Mongoose, Zod, TanStack Table, Cloudinary.</li>
+    <li><b>Dealership site and AI CRM</b> (<a href="https://cars-lac-omega.vercel.app/">cars-lac-omega.vercel.app</a>): a catalog managing <b>100+ cars</b>; a Chrome extension syncs <b>8 inventory sheets</b> and an <b>LLM chat with tool calling</b> answers stock questions.</li>
+    <li><b>E-commerce marketplace:</b> listings, filters and <b>Stripe checkout</b> with Clerk auth. Next.js, MongoDB.</li>
   </ul>
 </div>
 
-<h2>AI Systems</h2>
+<h2>Projects · live and open source</h2>
 <div class="item">
   <div class="head"><b>Answer agent</b><span class="when">Next.js · OpenAI · pgvector</span></div>
-  <ul><li>Answers customers from policies and live orders. <b>RAG plus safe SQL tools</b>; every answer <b>cites its source</b>.</li></ul>
+  <ul><li>Answers customers from policies and live orders with <b>RAG plus fixed SQL tools</b>. Every answer <b>cites its source</b>; weak matches get “I don’t know”; capped at 5 steps.</li></ul>
 </div>
 <div class="item">
   <div class="head"><b>Lead agent</b><span class="when">Python · LangGraph · Pydantic · MCP</span></div>
-  <ul><li>Qualifies leads and prepares CRM updates, then <b>waits for a human to approve</b> before acting.</li></ul>
+  <ul><li>Qualifies leads and prepares CRM updates in a 6-step graph. <b>Zero writes without human approval</b>; a restart mid-approval resumes from a Postgres checkpoint.</li></ul>
+</div>
+<div class="item">
+  <div class="head"><b>Lead triage</b><span class="when">n8n · OpenAI · Webhooks</span></div>
+  <ul><li>Sorts incoming messages and sends serious buyers to the Lead agent. <b>If a step fails, a person gets it.</b></li></ul>
 </div>
 
 <h2>Skills</h2>
 <div class="skills">
-  <p><b>AI</b><span>LLMs, multi-agent systems, OpenAI, RAG, LangGraph, Pydantic, MCP, n8n, tool calling, structured outputs</span></p>
+  <p><b>AI</b><span>Multi-agent systems, OpenAI, RAG, LangGraph, Pydantic, MCP, n8n, tool calling, structured outputs</span></p>
   <p><b>Web</b><span>TypeScript, React, Next.js, Node.js, Tailwind</span></p>
   <p><b>Back-end</b><span>Python, FastAPI, PostgreSQL, Prisma, MongoDB, Stripe</span></p>
   <p><b>Cloud</b><span>Vercel, Render, AWS (S3, Cognito, Lambda), Docker</span></p>

@@ -146,7 +146,7 @@ const en = {
     kicker: 'More responsibility at every step',
     hint: 'Click a step',
     production: 'Decide',
-    productionName: 'Multi-agent, on real business data',
+    productionName: 'Multi-agent, on real market data',
   },
   section: {
     useWhen: 'Use this when',
@@ -166,7 +166,7 @@ const en = {
   production: {
     kicker: '03 · Decide · in production',
     title: 'Resale Intelligence',
-    plain: 'The system I run my electronics resale business on. **Real listings, real prices.**',
+    plain: 'The system I built to price used electronics from **real market data**.',
     // El primer dato (anuncios rastreados) sale en vivo de la base; ver page.tsx.
     facts: [
       ['4 LLM agents', 'spec, market, risk, lead'],

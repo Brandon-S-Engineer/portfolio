@@ -46,7 +46,7 @@ export default function ResaleIntel({ snapshot, embedded = false }: { snapshot: 
       <div className='flex flex-wrap items-center justify-between gap-3'>
         {!embedded && (
           <p className='max-w-[64ch] text-[15px]' style={{ lineHeight: 1.55, color: 'var(--muted)' }}>
-            I resell used Apple devices in Mexico City. This is the system I built to run it: a Chrome extension feeds every
+            A system I built to price used Apple devices in Mexico City: a Chrome extension feeds every
             listing I browse into Postgres, deterministic code turns them into a live price model, and a multi-agent desk decides
             which deals are worth buying.
           </p>

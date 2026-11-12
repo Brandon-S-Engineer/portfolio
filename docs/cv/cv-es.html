@@ -22,9 +22,10 @@
 
 <h2>Experiencia</h2>
 <div class="item">
-  <div class="head"><b>Ingeniero de IA — Resale Intelligence (producto propio)</b><span class="when">2026 – Actual</span></div>
+  <div class="head"><b>Ingeniero de IA — Resale Intelligence (proyecto independiente)</b><span class="when">2026 – Actual</span></div>
   <ul>
     <li>Registré <b>más de 16,000 publicaciones de electrónica</b> con extensión de Chrome, API y Postgres.</li>
+    <li>Construí un <b>modelo de precios con publicaciones reales</b> (bandas P25–P75 por modelo, <b>más de 18,000 cambios de precio</b>), para ver el margen esperado de cada oferta.</li>
     <li>Evalué ofertas en <b>menos de 5 s y $0.001 cada una</b> con <b>4 agentes LLM</b> (specs, mercado, riesgo, decisión).</li>
     <li>Fijé topes de compra en código y SQL, con <b>guardrails que anulan veredictos LLM</b> contradictorios.</li>
   </ul>
@@ -32,23 +33,29 @@
 <div class="item">
   <div class="head"><b>Desarrollador Full-stack Freelance</b><span class="when">2024 – Actual</span></div>
   <ul>
-    <li>Sitio de venta de autos y <b>CRM con IA</b> para una asesora (<a href="https://cars-lac-omega.vercel.app/">https://cars-lac-omega.vercel.app</a>): extensión de Chrome que sincroniza <b>8 hojas de inventario</b> y <b>chat LLM con tool calling</b> sobre existencias.</li>
+    <li><b>Panel de administración:</b> el sistema con el que los clientes gestionan usuarios, productos y pedidos, con <b>JWT, acceso por roles</b>, formularios validados, gráficas y tablas paginadas. Mongoose, Zod, TanStack Table, Cloudinary.</li>
+    <li><b>Sitio de agencia y CRM con IA</b> (<a href="https://cars-lac-omega.vercel.app/">cars-lac-omega.vercel.app</a>): catálogo de <b>más de 100 autos</b>; una extensión de Chrome sincroniza <b>8 hojas de inventario</b> y un <b>chat LLM con tool calling</b> responde sobre existencias.</li>
+    <li><b>Marketplace de e-commerce:</b> catálogo, filtros y <b>pago con Stripe</b> y Clerk. Next.js, MongoDB.</li>
   </ul>
 </div>
 
-<h2>Sistemas de IA</h2>
+<h2>Proyectos · en vivo y de código abierto</h2>
 <div class="item">
   <div class="head"><b>Agente que responde</b><span class="when">Next.js · OpenAI · pgvector</span></div>
-  <ul><li>Responde a clientes con políticas y pedidos reales. <b>RAG y SQL seguro</b>; cada respuesta <b>cita su fuente</b>.</li></ul>
+  <ul><li>Responde a clientes con políticas y pedidos reales, con <b>RAG y consultas SQL fijas</b>. Cada respuesta <b>cita su fuente</b>; si no hay buena coincidencia dice “no sé”; máximo 5 pasos.</li></ul>
 </div>
 <div class="item">
   <div class="head"><b>Agente que actúa</b><span class="when">Python · LangGraph · Pydantic · MCP</span></div>
-  <ul><li>Califica leads y prepara cambios en el CRM; <b>espera la aprobación de una persona</b> antes de actuar.</li></ul>
+  <ul><li>Califica leads y prepara cambios en el CRM en un grafo de 6 pasos. <b>Nada se escribe sin aprobación humana</b>; si se reinicia, retoma desde un checkpoint en Postgres.</li></ul>
+</div>
+<div class="item">
+  <div class="head"><b>Clasificación de leads</b><span class="when">n8n · OpenAI · Webhooks</span></div>
+  <ul><li>Clasifica mensajes entrantes y manda a los compradores serios al agente. <b>Si un paso falla, el lead llega a una persona.</b></li></ul>
 </div>
 
 <h2>Habilidades</h2>
 <div class="skills">
-  <p><b>IA</b><span>LLMs, sistemas multi-agente, OpenAI, RAG, LangGraph, Pydantic, MCP, n8n, tool calling, salidas estructuradas</span></p>
+  <p><b>IA</b><span>Sistemas multi-agente, OpenAI, RAG, LangGraph, Pydantic, MCP, n8n, tool calling, salidas estructuradas</span></p>
   <p><b>Web</b><span>TypeScript, React, Next.js, Node.js, Tailwind</span></p>
   <p><b>Back-end</b><span>Python, FastAPI, PostgreSQL, Prisma, MongoDB, Stripe</span></p>
   <p><b>Nube</b><span>Vercel, Render, AWS (S3, Cognito, Lambda), Docker</span></p>
