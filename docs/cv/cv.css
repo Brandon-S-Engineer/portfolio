@@ -1,4 +1,4 @@
-@page { size: Letter; margin: 0.5in 0.7in; }
+@page { size: Letter; margin: 0.6in 0.7in; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #1a1a1a; }
 a { color: #0b5cad; text-decoration: underline; text-underline-offset: 1.5pt; }
@@ -7,8 +7,8 @@ h1 { font-size: 19pt; letter-spacing: -0.01em; }
 .role { font-size: 11pt; font-weight: 600; color: #0b5cad; margin-top: 1pt; }
 .contact { margin-top: 3pt; font-size: 9pt; color: #333; }
 .contact span + span::before { content: ' · '; color: #999; }
-h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #0b5cad; border-bottom: 1px solid #c9d6e3; padding-bottom: 1.5pt; margin: 11pt 0 5pt; }
-.item { margin-bottom: 6pt; }
+h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #0b5cad; border-bottom: 1px solid #c9d6e3; padding-bottom: 1.5pt; margin: 14pt 0 5pt; }
+.item { margin-bottom: 8pt; }
 .head { display: flex; justify-content: space-between; gap: 12pt; }
 .head b { font-size: 10pt; }
 .when { color: #555; white-space: nowrap; }
