@@ -6,8 +6,10 @@
 //
 //   - Lista de la izquierda: título, empresa, ubicación → se manda sola.
 //   - Panel de la derecha: la descripción completa SOLO aparece al dar clic en
-//     una vacante. Se captura cada vez que abres una, o con el botón "Leer
-//     todas", que las abre una por una con pausas (Indeed bloquea si vas rápido).
+//     una vacante. Se captura cada vez que TÚ abres una.
+//
+// 100% pasivo: este script no hace clics ni navega. Indeed bloquea la página
+// si detecta clics automáticos (probado el 13/11/2026).
 //
 // Selectores verificados el 13/11/2026 (usar data-testid; las clases css-xxxx cambian).
 
@@ -36,7 +38,6 @@
   const verdicts = new Map() // jk → { verdict, score, expYears, estado }
   let queue = []
   let flushTimer = null
-  let walking = false
   let lastError = null
 
   const log = (...a) => console.log('%c[Vacantes]', 'color:#16a34a;font-weight:600', ...a)
@@ -161,39 +162,6 @@
     badge.textContent = v.estado === 'APLICADA' ? 'Ya aplicaste' : `${LABELS[v.verdict] ?? v.verdict} · ${v.score}/10${exp}`
   }
 
-  // ── "Leer todas": abre cada vacante con pausas ─────────────────────────────
-
-  async function walk() {
-    if (walking) { walking = false; return }
-    walking = true
-    let fails = 0
-    const cards = [...document.querySelectorAll(SEL.card)]
-    for (const card of cards) {
-      if (!walking) break
-      const c = readCard(card)
-      if (!c || sentFull.has(c.jk)) continue
-      // Lo que ya salió descartado por el título no vale un clic.
-      if (verdicts.get(c.jk)?.verdict === 'DESCARTAR') continue
-      card.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      card.querySelector(SEL.cardLink)?.click()
-      const opened = await waitFor(() => readPane()?.jk === c.jk, 8000)
-      if (opened) { fails = 0; scan() } else if (++fails >= 3) { lastError = 'Indeed dejó de abrir vacantes (¿captcha?). Me detuve.'; break }
-      renderStatus()
-      await sleep(1500 + Math.random() * 1500)
-    }
-    walking = false
-    renderStatus()
-  }
-
-  async function waitFor(fn, ms) {
-    const end = Date.now() + ms
-    while (Date.now() < end) {
-      if (fn()) return true
-      await sleep(250)
-    }
-    return false
-  }
-
   // ── Indicador ──────────────────────────────────────────────────────────────
 
   let statusEl = null
@@ -204,8 +172,8 @@
       statusEl = document.createElement('div')
       statusEl.style.cssText = `position:fixed;bottom:16px;left:16px;z-index:99999;background:rgba(17,24,39,.94);color:#fff;
         font:12px/1.45 system-ui,-apple-system,sans-serif;padding:8px 11px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);max-width:270px`
-      statusEl.innerHTML = '<div data-info></div><button data-walk style="margin-top:6px;width:100%;padding:5px 8px;border:0;border-radius:6px;background:#16a34a;color:#fff;font:600 12px system-ui;cursor:pointer"></button>'
-      statusEl.querySelector('[data-walk]').addEventListener('click', walk)
+      statusEl.style.pointerEvents = 'none'
+      statusEl.innerHTML = '<div data-info></div>'
       document.body.appendChild(statusEl)
     }
     const count = (v) => cards.filter((c) => verdicts.get(c.jk)?.verdict === v).length
@@ -213,17 +181,12 @@
     const info = `<strong>Vacantes → CRM</strong><br>
       ${cards.length} en esta página · <span style="color:#86efac">${count('APLICAR')} aplicar</span> ·
       <span style="color:#fcd34d">${count('ESTIRAR')} estirar</span> · <span style="color:#fca5a5">${count('DESCARTAR')} descartar</span>
+      <br>${pending ? `Abre ${pending === 1 ? 'la que falta' : `las ${pending} que faltan`} para leer su descripción` : '<span style="color:#86efac">Todas leídas ✓</span>'}
       ${lastError ? `<br><span style="color:#fca5a5">⚠ ${lastError}</span>` : ''}`
-    const label = walking ? 'Detener' : pending ? `Leer ${pending} descripci${pending === 1 ? 'ón' : 'ones'}` : 'Todo leído ✓'
     // Solo tocar el DOM si cambió algo (si no, el observer se dispara solo).
-    if (statusEl.dataset.sig === info + label) return
-    statusEl.dataset.sig = info + label
+    if (statusEl.dataset.sig === info) return
+    statusEl.dataset.sig = info
     statusEl.querySelector('[data-info]').innerHTML = info
-    const btn = statusEl.querySelector('[data-walk]')
-    btn.textContent = label
-    btn.disabled = !walking && !pending
-    btn.style.opacity = btn.disabled ? '0.5' : '1'
-    btn.style.background = walking ? '#dc2626' : '#16a34a'
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────

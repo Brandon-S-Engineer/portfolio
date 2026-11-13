@@ -29,7 +29,7 @@ export type Vacante = {
 const TABS = [
   { id: 'APLICAR', label: 'Aplicar', hint: 'Cumples la experiencia y el stack encaja' },
   { id: 'ESTIRAR', label: 'Estirar', hint: 'Piden 3–4 años o nivel senior: aplica si te interesa mucho' },
-  { id: 'PENDIENTE', label: 'Falta leer', hint: 'Solo se capturó la tarjeta: ábrela en Indeed o usa "Leer descripciones"' },
+  { id: 'PENDIENTE', label: 'Falta leer', hint: 'Solo se capturó la tarjeta: ábrela en Indeed y la descripción se captura sola' },
   { id: 'GUARDADA', label: 'Guardadas', hint: 'Las que marcaste para después' },
   { id: 'APLICADA', label: 'Aplicadas', hint: 'Ya mandaste tu CV' },
   { id: 'DESCARTAR', label: 'Descartadas', hint: 'Fuera de alcance, de otro stack, o las que quitaste tú' },
