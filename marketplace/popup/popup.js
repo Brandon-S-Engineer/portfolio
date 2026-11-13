@@ -498,6 +498,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.tabs.create({ url: `${(s.crmUrl || 'http://localhost:3000').replace(/\/$/, '')}/dashboard/electronicos` })
   })
 
+  $('jobs-open-crm').addEventListener('click', async () => {
+    const s = await getSettings()
+    chrome.tabs.create({ url: `${(s.crmUrl || 'http://localhost:3000').replace(/\/$/, '')}/dashboard/empleos` })
+  })
+
   await refresh()
 
   // Marcar todas las 'new' como 'viewed' al abrir (limpia el badge)

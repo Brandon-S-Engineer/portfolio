@@ -1,6 +1,6 @@
 import {
   Wallet, Search, Smartphone, Tablet, Laptop, Headphones, ShoppingBag, ShieldCheck,
-  Briefcase, Clapperboard, Users, MapPin, Key, Settings, type LucideIcon,
+  Briefcase, Building2, Clapperboard, Users, MapPin, Key, Settings, type LucideIcon,
 } from 'lucide-react'
 
 export type NavItem = { href: string; label: string; icon: LucideIcon }
@@ -25,6 +25,12 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/audifonos', label: 'Audífonos', icon: Headphones },
       { href: '/dashboard/bolsos', label: 'Bolsos', icon: ShoppingBag },
       { href: '/dashboard/autenticacion', label: 'Autenticación', icon: ShieldCheck },
+    ],
+  },
+  {
+    title: 'Empleo',
+    items: [
+      { href: '/dashboard/empleos', label: 'Vacantes', icon: Building2 },
     ],
   },
   {

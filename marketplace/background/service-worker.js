@@ -34,6 +34,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     postElecListings(msg.payload).then((result) => sendResponse(result))
     return true
   }
+  if (msg.type === 'JOBS_INGEST') {
+    postJobs(msg.payload).then((result) => sendResponse(result))
+    return true
+  }
   if (msg.type === 'SYNC_RELOAD_ALARMS') {
     syncReloadAlarms().then(() => sendResponse({ ok: true }))
     return true
@@ -213,6 +217,30 @@ async function postElecListings(payload) {
     const data = await res.json()
     await bumpElecStats(payload.listings.length, data)
     return { ok: true, data }
+  } catch (err) {
+    return { ok: false, error: `No se pudo conectar: ${err.message}` }
+  }
+}
+
+// ── Vacantes (Indeed) ────────────────────────────────────────────────────────
+
+async function postJobs(payload) {
+  const settings = await getSettings()
+  if (!settings.crmUrl || !settings.crmApiKey) {
+    return { ok: false, error: 'CRM no configurado (opciones → Conexión al CRM)' }
+  }
+  try {
+    const res = await fetch(`${settings.crmUrl.replace(/\/$/, '')}/api/empleos/ofertas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.crmApiKey}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    if (res.status === 401) return { ok: false, error: 'API key inválida' }
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
+    return { ok: true, data: await res.json() }
   } catch (err) {
     return { ok: false, error: `No se pudo conectar: ${err.message}` }
   }

@@ -676,3 +676,36 @@ model DemoDemandWeek {
 
   @@unique([demoId, weekStart])
 }
+
+// ── Empleos (búsqueda de trabajo de tiempo completo) ─────────────────────────
+//
+// Vacantes capturadas por la extensión `marketplace/` en Indeed. El servidor
+// calcula el veredicto (src/lib/empleos/score.ts): el filtro #1 son los años
+// de experiencia que piden.
+
+model JobPosting {
+  id          String    @id @default(cuid())
+  externalId  String    @unique // "indeed_<jk>"
+  source      String    @default("INDEED")
+  url         String
+  title       String
+  company     String?
+  location    String?
+  snippet     String? // tarjeta de la lista: tipo de empleo / sueldo
+  details     String? // panel: sueldo, jornada
+  description String?
+  expYears    Int? // años de experiencia que piden (el máximo que se menciona)
+  verdict     String    @default("PENDIENTE") // APLICAR | ESTIRAR | DESCARTAR | PENDIENTE (sin descripción)
+  score       Float?
+  reasons     Json      @default("[]")
+  estado      String    @default("NUEVA") // NUEVA | GUARDADA | APLICADA | DESCARTADA
+  appliedAt   DateTime?
+  notes       String?
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([verdict])
+  @@index([estado])
+}
