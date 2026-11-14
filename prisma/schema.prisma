@@ -715,3 +715,15 @@ model JobMutedCompany {
   name      String   @id // nombre en minúsculas, sin espacios de sobra
   createdAt DateTime @default(now())
 }
+
+// Llamadas al agente de voz del portafolio ("Talk to my portfolio"). Solo para
+// los topes de gasto: por visitante y por día (ver api/talk).
+model TalkCall {
+  id        String   @id @default(cuid())
+  ipHash    String
+  callId    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+}

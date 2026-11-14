@@ -819,6 +819,15 @@ html:not(.dark) .site-day {
   transform: scale(1.18);
 }
 
+/* En llamada: las barras se mueven más rápido y el aura brilla más. */
+.talk-live .talk-bars span {
+  animation-duration: 0.55s;
+}
+.talk-live .talk-aura {
+  opacity: 1;
+  filter: blur(22px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-rise,
   .site-rise-delay,

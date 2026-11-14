@@ -211,7 +211,14 @@ const en = {
   talk: {
     sub: 'EN · ES',
     caption: 'Ask about my experience and projects, out loud, in English or Spanish.',
-    pending: 'My voice agent is being tuned and goes live soon. Meanwhile, try the three systems below.',
+    // Mensajes de cada estado de la llamada.
+    connecting: 'Connecting… allow the microphone when your browser asks.',
+    live: 'Live with Leo · just talk, he’ll answer.',
+    ended: 'Thanks for calling. My contact details are right below.',
+    limit: 'Today’s call limit is reached. Try the three systems below, or contact me directly.',
+    micDenied: 'The call needs your microphone. Allow it in your browser and try again.',
+    error: 'The call couldn’t start. Try again in a moment.',
+    pending: 'My voice agent goes live soon. Meanwhile, try the three systems below.',
   },
 }
 

@@ -1,11 +1,16 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
+import type { WebCallSession } from 'retell-client-js-sdk'
+import type { HiringCopy } from '@/content/hiring'
 
-// "Talk to my portfolio": llamada de voz con el agente que responde sobre mi
-// portafolio. El mismo botón vive en el hero y en el header; el del header
-// avisa al del hero con un evento. Mientras el agente se calibra, el clic avisa
-// en vez de fingir una llamada (todo lo que se muestra pega a un backend real).
+// "Talk to my portfolio": llamada de voz en el navegador con Leo, el agente de
+// Retell que responde sobre mi portafolio. El mismo botón vive en el hero y en
+// el header; el del header avisa al del hero con un evento.
+//
+// La llamada pasa por /api/talk (la API key se queda en el servidor, que además
+// aplica los topes de gasto). Si el servidor no está configurado, el botón lo
+// dice en vez de fingir una llamada.
 export const TALK_EVENT = 'talk:start'
 export const TALK_LABEL = 'Talk to my portfolio'
 
@@ -25,9 +30,21 @@ function reset(e: PointerEvent<HTMLElement>) {
   ;(e.currentTarget.parentElement ?? e.currentTarget).style.removeProperty('--talk-hue')
 }
 
-export function TalkPill({ size = 'lg', sub, onClick }: { size?: 'lg' | 'sm'; sub?: string; onClick: () => void }) {
+export function TalkPill({
+  size = 'lg',
+  sub,
+  label = TALK_LABEL,
+  live = false,
+  onClick,
+}: {
+  size?: 'lg' | 'sm'
+  sub?: string
+  label?: string
+  live?: boolean
+  onClick: () => void
+}) {
   return (
-    <span className={`talk-wrap talk-${size}`}>
+    <span className={`talk-wrap talk-${size} ${live ? 'talk-live' : ''}`}>
       <span className='talk-aura' aria-hidden='true' />
       <button type='button' className='talk-btn' onClick={onClick} onPointerMove={track} onPointerLeave={reset}>
         <span className='talk-shine' aria-hidden='true' />
@@ -36,7 +53,7 @@ export function TalkPill({ size = 'lg', sub, onClick }: { size?: 'lg' | 'sm'; su
             <span key={i} style={{ animationDelay: `${i * 0.18}s` }} />
           ))}
         </span>
-        <span className='talk-label'>{TALK_LABEL}</span>
+        <span className='talk-label'>{label}</span>
         {sub && <span className='talk-chip site-mono'>{sub}</span>}
       </button>
     </span>
@@ -95,21 +112,111 @@ function Sky() {
   )
 }
 
-export default function TalkButton({ sub, caption, pending }: { sub: string; caption: string; pending: string }) {
-  const [clicked, setClicked] = useState(false)
+type Status = 'idle' | 'connecting' | 'live' | 'ended' | 'limit' | 'micDenied' | 'error' | 'pending'
+
+const MAX_SECONDS = 180
+
+// El SDK de Retell se carga en cuanto la página está lista (no en el clic),
+// para que el permiso del micrófono se pida dentro del gesto del usuario.
+let sdk: Promise<typeof import('retell-client-js-sdk')> | null = null
+const loadSdk = () => (sdk ??= import('retell-client-js-sdk'))
+
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+export default function TalkButton({ copy }: { copy: HiringCopy['talk'] }) {
+  const [status, setStatus] = useState<Status>('idle')
+  const [seconds, setSeconds] = useState(0)
+  const call = useRef<WebCallSession | null>(null)
+  const startRef = useRef<() => void>(() => {})
+
+  async function start() {
+    if (call.current) return
+    setStatus('connecting')
+    setSeconds(0)
+    try {
+      const { RetellClient, RetellApiError } = await loadSdk()
+      const client = new RetellClient({
+        key: 'proxy', // la llave real la pone /api/talk
+        fetch: (url, init) => fetch(`/api/talk${new URL(String(url)).pathname}`, init),
+      })
+      const session = client.createWebCall({
+        agent_id: 'set-on-server',
+        hooks: {
+          onStatus: (s) => {
+            if (s === 'live') setStatus('live')
+            if (s === 'ended') {
+              call.current = null
+              setStatus((prev) => (prev === 'live' || prev === 'connecting' ? 'ended' : prev))
+            }
+          },
+          onError: (err) => {
+            console.error('[talk]', err)
+            const denied = err.name === 'NotAllowedError' || /permission|microphone|notallowed/i.test(err.message)
+            if (denied) setStatus('micDenied')
+          },
+        },
+      })
+      call.current = session
+      await session.ready.catch((err: unknown) => {
+        call.current = null
+        if (err instanceof RetellApiError) {
+          setStatus(err.status === 429 ? 'limit' : err.status === 503 ? 'pending' : 'error')
+        } else {
+          const e = err as Error
+          setStatus(e?.name === 'NotAllowedError' || /permission|microphone/i.test(e?.message ?? '') ? 'micDenied' : 'error')
+        }
+      })
+    } catch (err) {
+      console.error('[talk]', err)
+      call.current = null
+      setStatus('error')
+    }
+  }
+  startRef.current = start
+
+  async function hangUp() {
+    const s = call.current
+    call.current = null
+    setStatus('ended')
+    await s?.end().catch(() => {})
+  }
 
   useEffect(() => {
-    const onTalk = () => setClicked(true)
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 1500))
+    idle(() => void loadSdk())
+    const onTalk = () => startRef.current()
     window.addEventListener(TALK_EVENT, onTalk)
-    return () => window.removeEventListener(TALK_EVENT, onTalk)
+    return () => {
+      window.removeEventListener(TALK_EVENT, onTalk)
+      void call.current?.end()
+    }
   }, [])
+
+  useEffect(() => {
+    if (status !== 'live') return
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [status])
+
+  const live = status === 'live'
+  const caption =
+    status === 'idle'
+      ? copy.caption
+      : live
+        ? `${copy.live} ${mmss(seconds)} / ${mmss(MAX_SECONDS)}`
+        : copy[status]
 
   return (
     <div id='talk' className='talk-stage mt-4 scroll-mt-28'>
       <Sky />
-      <TalkPill sub={sub} onClick={() => setClicked(true)} />
+      <TalkPill
+        sub={live ? undefined : copy.sub}
+        label={live ? 'End call' : status === 'connecting' ? 'Connecting…' : TALK_LABEL}
+        live={live}
+        onClick={() => (live || status === 'connecting' ? hangUp() : start())}
+      />
       <p aria-live='polite' className='talk-caption mt-5 text-[13.5px]'>
-        {clicked ? pending : caption}
+        {caption}
       </p>
     </div>
   )

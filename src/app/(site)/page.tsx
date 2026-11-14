@@ -117,7 +117,7 @@ export default async function HomePage() {
               <p className='mt-3 max-w-[54ch] text-[14px]' style={{ lineHeight: 1.6, color: 'var(--muted)' }}>
                 <Rich text={copy.about} strong='var(--fg)' />
               </p>
-              <TalkButton sub={copy.talk.sub} caption={copy.talk.caption} pending={copy.talk.pending} />
+              <TalkButton copy={copy.talk} />
             </div>
             <LevelLadder copy={copy} />
           </div>
