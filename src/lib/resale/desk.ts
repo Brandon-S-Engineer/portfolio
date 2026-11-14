@@ -26,6 +26,45 @@ export type { AgentId, DeskEvent, DeskResult } from './types'
 
 export class DeskError extends Error {}
 
+export type DeskLang = 'en' | 'es'
+
+// Todo lo que el desk escribe (código y agentes) sale en el idioma de la página.
+// El mensaje al vendedor también: en la demo en inglés, la oferta se lee en inglés.
+const TXT = {
+  en: {
+    language: 'English',
+    offerStyle: 'natural, friendly English',
+    notFound: 'Listing not found.',
+    needPrice: 'Include a price in MXN, e.g. "$9,500".',
+    noModel: 'Could not identify an Apple model (iPhone, iPad, MacBook or AirPods) in the text.',
+    noData: 'Not enough market data for this model yet.',
+    invalid: (id: string) => `The ${id} agent returned an invalid answer. Try again.`,
+    unknown: 'unknown',
+    skipped: 'Parser was confident — no LLM call needed.',
+    exact: 'exact config',
+    whole: 'whole model (storage unknown or few exact comps)',
+    notStated: 'not stated',
+    downgraded: (price: string, max: string) => `Lead said BUY but ${price} is above the max buy of ${max} — downgraded to NEGOTIATE.`,
+    forcedPass: 'Risk analyst flagged high risk — forced to PASS.',
+  },
+  es: {
+    language: 'Spanish',
+    offerStyle: 'casual Mexican Spanish',
+    notFound: 'No se encontró el anuncio.',
+    needPrice: 'Incluye un precio en MXN, por ejemplo "$9,500".',
+    noModel: 'No se identificó un modelo de Apple (iPhone, iPad, MacBook o AirPods) en el texto.',
+    noData: 'Todavía no hay suficientes datos de mercado para este modelo.',
+    invalid: (id: string) => `El agente ${id} devolvió una respuesta inválida. Intenta de nuevo.`,
+    unknown: 'desconocida',
+    skipped: 'El parser estaba seguro, no hizo falta llamar al LLM.',
+    exact: 'configuración exacta',
+    whole: 'modelo completo (capacidad desconocida o pocos comparables exactos)',
+    notStated: 'no se dice',
+    downgraded: (price: string, max: string) => `La decisión dijo COMPRAR, pero ${price} supera la compra máxima de ${max}: se bajó a NEGOCIAR.`,
+    forcedPass: 'El analista de riesgo marcó riesgo alto: se forzó PASAR.',
+  },
+}
+
 type Listing = {
   title: string
   description: string | null
@@ -41,22 +80,22 @@ type Listing = {
 const round100 = (n: number) => Math.round(n / 100) * 100
 const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
-async function loadListing(input: { listingId?: string; text?: string }): Promise<Listing> {
+async function loadListing(input: { listingId?: string; text?: string }, t: (typeof TXT)['en']): Promise<Listing> {
   if (input.listingId) {
     const l = await prisma.elecListing.findFirst({
       where: { id: input.listingId, oculto: false, category: { in: [...MARKET_CATEGORIES] } },
       select: { title: true, description: true, price: true, line: true, chip: true, ramGb: true, ssdGb: true, flags: true, parseConfidence: true },
     })
-    if (!l || !l.price) throw new DeskError('Listing not found.')
+    if (!l || !l.price) throw new DeskError(t.notFound)
     return { ...l, price: l.price, flags: (l.flags ?? {}) as SpecFlags, confidence: l.parseConfidence }
   }
   const text = (input.text ?? '').trim()
   const [title, ...rest] = text.split('\n')
   const price = parsePriceFromText(text)
-  if (!price) throw new DeskError('Include a price in MXN, e.g. "$9,500".')
+  if (!price) throw new DeskError(t.needPrice)
   const p = parseListing(title, rest.join('\n') || null)
   if (!p.line || !(MARKET_CATEGORIES as readonly string[]).includes(p.category)) {
-    throw new DeskError('Could not identify an Apple model (iPhone, iPad, MacBook or AirPods) in the text.')
+    throw new DeskError(t.noModel)
   }
   return {
     title, description: rest.join('\n') || null, price,
@@ -69,7 +108,7 @@ function storageOptions(line: string): number[] {
 }
 
 /** Comparables reales: misma config si hay muestra, si no el modelo completo. */
-async function comps(l: Listing) {
+async function comps(l: Listing, t: (typeof TXT)['en']) {
   const rows = await prisma.elecListing.findMany({
     where: { line: l.line, oculto: false, ...(l.chip ? { chip: l.chip } : {}) },
     select: {
@@ -81,13 +120,13 @@ async function comps(l: Listing) {
   const exact = l.ssdGb ? usable.filter((r) => r.ssdGb === l.ssdGb && (!l.ramGb || r.ramGb === l.ramGb)) : []
   const group = exact.length >= 8 ? exact : usable
   const prices = cleanPrices(group.map((r) => r.price!))
-  if (prices.length < 5) throw new DeskError('Not enough market data for this model yet.')
+  if (prices.length < 5) throw new DeskError(t.noData)
   const gone = group.filter(isSold)
   const p25 = percentile(prices, 0.25)!
   const p75 = percentile(prices, 0.75)!
   const target = marginTarget(l.line, p75)
   return {
-    scope: group === exact ? 'exact config' : 'whole model (storage unknown or few exact comps)',
+    scope: group === exact ? t.exact : t.whole,
     n: prices.length,
     p25,
     p50: percentile(prices, 0.5)!,
@@ -143,7 +182,9 @@ const leadSchema = z.object({
   offerMessage: clip(500),
 })
 
-export async function runDesk(input: { listingId?: string; text?: string }, emit: (e: DeskEvent) => void) {
+export async function runDesk(input: { listingId?: string; text?: string; lang?: DeskLang }, emit: (e: DeskEvent) => void) {
+  const tx = TXT[input.lang ?? 'en']
+  const L = tx.language
   const started = Date.now()
   let tokens = 0
   let cost = 0
@@ -156,18 +197,18 @@ export async function runDesk(input: { listingId?: string; text?: string }, emit
     cost += costUsd(DESK_MODEL, usage.prompt_tokens, usage.completion_tokens) ?? 0
     const parsed = schema.safeParse(data)
     if (!parsed.success) console.error(id, parsed.error.issues, data)
-    if (!parsed.success) throw new DeskError(`The ${id} agent returned an invalid answer. Try again.`)
+    if (!parsed.success) throw new DeskError(tx.invalid(id))
     return { out: parsed.data, ms: Date.now() - t, tokens: used }
   }
 
   // 1 · Parse (código)
   emit({ type: 'step', id: 'parse', status: 'start' })
   let t = Date.now()
-  const l = await loadListing(input)
+  const l = await loadListing(input, tx)
   const model = modelLabel(l)
   emit({
     type: 'step', id: 'parse', status: 'done', ms: Date.now() - t,
-    output: { model, storage: l.ssdGb ? `${l.ssdGb} GB` : 'unknown', price: l.price, confidence: l.confidence },
+    output: { model, storage: l.ssdGb ? `${l.ssdGb} GB` : tx.unknown, price: l.price, confidence: l.confidence },
   })
 
   // 2 · Spec analyst (LLM): solo cuando el parser no pudo fijar la config
@@ -177,19 +218,19 @@ export async function runDesk(input: { listingId?: string; text?: string }, emit
     const { out, ms, tokens: tk } = await llm('spec', specSchema,
       `You read used-Apple listings from Facebook Marketplace (Mexico, Spanish). Return JSON {ssdGb, condition, notes}.
 ssdGb: the storage ONLY if the text states it explicitly, and only one of ${JSON.stringify(options)}; otherwise null. Never guess.
-condition: short English summary of the condition the text claims (or "not stated").
-notes: anything ambiguous, e.g. "venta o cambio" (sale or swap), carrier-locked, missing accessories. English, one sentence.`,
+condition: short ${L} summary of the condition the text claims (or "${tx.notStated}").
+notes: anything ambiguous, e.g. "venta o cambio" (sale or swap), carrier-locked, missing accessories. ${L}, one sentence.`,
       { title: l.title, description: l.description?.slice(0, 600) ?? null, parsedModel: model })
     if (out.ssdGb && options.includes(out.ssdGb)) l.ssdGb = out.ssdGb
     emit({ type: 'step', id: 'spec', status: 'done', ms, tokens: tk, output: { ...out, ssdGb: l.ssdGb } })
   } else {
-    emit({ type: 'step', id: 'spec', status: 'skipped', note: 'Parser was confident — no LLM call needed.' })
+    emit({ type: 'step', id: 'spec', status: 'skipped', note: tx.skipped })
   }
 
   // 3 · Comps (SQL)
   emit({ type: 'step', id: 'comps', status: 'start' })
   t = Date.now()
-  const c = await comps(l)
+  const c = await comps(l, tx)
   emit({ type: 'step', id: 'comps', status: 'done', ms: Date.now() - t, output: c })
 
   // 4 · Market ∥ Risk (LLM en paralelo)
@@ -199,14 +240,14 @@ notes: anything ambiguous, e.g. "venta o cambio" (sale or swap), carrier-locked,
 Return JSON {expectedSale, daysToSell, demand, summary}.
 expectedSale: realistic resale price for this unit, between p25 and p75 of the comps (higher only if condition/extras justify it).
 daysToSell: from medianDaysToSell if present, else null. demand: from how many comps disappeared (sold) vs are active.
-summary: 2 short sentences in English citing the numbers.`,
+summary: 2 short sentences in ${L} citing the numbers.`,
       // Sin el tope de compra: es una regla nuestra, no un dato del mercado
       { listing: { model, storage: l.ssdGb, price: l.price, flags: l.flags }, comps: { ...c, ceiling: undefined, marginTarget: undefined } }),
     llm('risk', riskSchema,
       `You are a fraud and condition risk analyst for used-phone deals on Facebook Marketplace (Mexico).
 Return JSON {risk, flags, haircutPct, summary}.
 Look for: price far below market (bait/scam), iCloud/blocked, reported (IMEI), carrier-locked, swaps ("cambio"), repairs or non-original parts, battery, damage, vague text.
-haircutPct: 0–30, how much to lower the max buy price for the risk. flags: up to 4 short English labels. summary: one English sentence.
+haircutPct: 0–30, how much to lower the max buy price for the risk. flags: up to 4 short ${L} labels. summary: one ${L} sentence.
 Missing description alone is normal on Marketplace, not a red flag.`,
       {
         title: l.title, description: l.description?.slice(0, 600) ?? null, price: l.price, marketP25: c.p25,
@@ -227,8 +268,8 @@ Missing description alone is normal on Marketplace, not a red flag.`,
   const lead = await llm('lead', leadSchema,
     `You lead a used-Apple resale desk in Mexico City and make the final call. Return JSON {verdict, reasoning, offerMessage}.
 Rules: BUY if price <= maxBuy and risk is not high. NEGOTIATE if price is above maxBuy but within ~15%, or risk is medium. PASS otherwise or if risk is high.
-reasoning: 1–3 short English bullets with the key numbers.
-offerMessage: the FIRST message you (the buyer) send to the seller about their listing, in casual Mexican Spanish, max 2 sentences. The seller posted the listing; nobody has made an offer yet.
+reasoning: 1–3 short ${L} bullets with the key numbers.
+offerMessage: the FIRST message you (the buyer) send to the seller about their listing, in ${tx.offerStyle}, max 2 sentences. The seller posted the listing; nobody has made an offer yet.
 - BUY: ask if it's still available and propose meeting in person to check it.
 - NEGOTIATE: ask if it's available and offer exactly offerPrice MXN.
 - PASS because of price: a polite offer of exactly offerPrice MXN, no pressure.
@@ -241,11 +282,11 @@ Never mention any price other than offerPrice.`,
   let guardrail: string | null = null
   if (verdict === 'BUY' && l.price > maxBuy) {
     verdict = 'NEGOTIATE'
-    guardrail = `Lead said BUY but ${fmt(l.price)} is above the max buy of ${fmt(maxBuy)} — downgraded to NEGOTIATE.`
+    guardrail = tx.downgraded(fmt(l.price), fmt(maxBuy))
   }
   if (verdict !== 'PASS' && risk.out.risk === 'high') {
     verdict = 'PASS'
-    guardrail = 'Risk analyst flagged high risk — forced to PASS.'
+    guardrail = tx.forcedPass
   }
   emit({ type: 'step', id: 'lead', status: 'done', ms: lead.ms, tokens: lead.tokens, output: { ...lead.out, verdict } })
 

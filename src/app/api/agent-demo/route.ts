@@ -17,7 +17,22 @@ const bodySchema = z.object({
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(1000) }))
     .min(1)
     .max(12),
+  // Solo cambia los mensajes de error; el agente ya responde en el idioma de la pregunta.
+  lang: z.enum(['en', 'es']).default('en'),
 })
+
+const ERR = {
+  en: {
+    limit: 'Demo limit reached for this hour. Try again later.',
+    steps: 'The agent took too many steps. Try a more specific question.',
+    failed: 'The agent failed to answer. Please try again.',
+  },
+  es: {
+    limit: 'Llegaste al límite de la demo por esta hora. Intenta más tarde.',
+    steps: 'El agente necesitó demasiados pasos. Prueba con una pregunta más concreta.',
+    failed: 'El agente no pudo responder. Intenta de nuevo.',
+  },
+}
 
 // Límite por IP en memoria. En serverless es aproximado (por instancia), pero
 // basta para que nadie queme los créditos de la API desde el portafolio.
@@ -38,10 +53,6 @@ const MAX_STEPS = 5
 
 export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
-  if (rateLimited(ip)) {
-    return Response.json({ error: 'Demo limit reached for this hour. Try again later.' }, { status: 429 })
-  }
-
   let body: unknown
   try {
     body = await req.json()
@@ -50,6 +61,8 @@ export async function POST(req: Request) {
   }
   const parsed = bodySchema.safeParse(body)
   if (!parsed.success) return Response.json({ error: 'Invalid request' }, { status: 400 })
+  const err = ERR[parsed.data.lang]
+  if (rateLimited(ip)) return Response.json({ error: err.limit }, { status: 429 })
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -104,10 +117,10 @@ export async function POST(req: Request) {
             messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(out.result) })
           }
         }
-        send({ type: 'error', message: 'The agent took too many steps. Try a more specific question.' })
+        send({ type: 'error', message: err.steps })
       } catch (e) {
         console.error('[agent-demo]', e)
-        send({ type: 'error', message: 'The agent failed to answer. Please try again.' })
+        send({ type: 'error', message: err.failed })
       }
       controller.close()
     },

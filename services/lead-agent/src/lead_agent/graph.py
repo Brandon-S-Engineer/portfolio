@@ -40,13 +40,13 @@ class Qualification(BaseModel):
     budget_mxn: int | None = Field(description="Budget in MXN if stated or clearly implied, else null.")
     urgency: Literal["now", "this_month", "browsing"]
     score: int = Field(description="Likelihood to buy soon, integer from 0 to 100 (e.g. 85 = very likely).")
-    summary: str = Field(description="One sentence for the salesperson.")
+    summary: str = Field(description="One sentence for the salesperson, in the customer's language.")
 
 
 class Action(BaseModel):
     tool: Literal["upsert_contact", "update_stage", "log_activity", "schedule_followup"]
     args: dict[str, Any] = Field(description="Arguments exactly as the tool schema expects.")
-    why: str = Field(description="Short reason shown to the human approver.")
+    why: str = Field(description="Short reason shown to the human approver, in the customer's language.")
 
 
 class ActionPlan(BaseModel):
@@ -145,7 +145,8 @@ def build_graph(session: ClientSession, write_tool_specs: str, model: str, check
                     "Rules: use contact_key exactly as given. Always upsert_contact first (with name, interest, "
                     "budget_mxn and score). Then one update_stage: 'quoted' if the drafted reply mentions a price, "
                     "otherwise 'qualified' when score >= 50; skip it if neither applies. Log the drafted reply with log_activity kind='message'. Schedule a follow-up "
-                    "when urgency is not 'browsing'. For spam propose no actions."
+                    "when urgency is not 'browsing'. For spam propose no actions. "
+                    "Write every `why`, and any free-text note or reason in the args, in qualification.language."
                 ),
                 HumanMessage(
                     json.dumps(

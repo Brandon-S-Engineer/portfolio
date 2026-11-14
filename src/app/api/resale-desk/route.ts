@@ -12,6 +12,7 @@ const bodySchema = z
   .object({
     listingId: z.string().min(5).max(40).optional(),
     text: z.string().min(8).max(1500).optional(),
+    lang: z.enum(['en', 'es']).default('en'),
   })
   .refine((b) => b.listingId || b.text, 'listingId or text is required')
 
@@ -31,11 +32,15 @@ function rateLimited(ip: string) {
 
 export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
-  if (rateLimited(ip)) {
-    return Response.json({ error: 'Demo limit reached for this hour. Try again later.' }, { status: 429 })
-  }
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return Response.json({ error: 'Invalid request' }, { status: 400 })
+  if (rateLimited(ip)) {
+    const es = parsed.data.lang === 'es'
+    return Response.json(
+      { error: es ? 'Llegaste al límite de la demo por esta hora. Intenta más tarde.' : 'Demo limit reached for this hour. Try again later.' },
+      { status: 429 },
+    )
+  }
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -45,7 +50,7 @@ export async function POST(req: Request) {
         await runDesk(parsed.data, send)
       } catch (e) {
         console.error('resale desk failed', e)
-        send({ type: 'error', message: e instanceof DeskError ? e.message : 'Something went wrong. Try again.' })
+        send({ type: 'error', message: e instanceof DeskError ? e.message : parsed.data.lang === 'es' ? 'Algo salió mal. Intenta de nuevo.' : 'Something went wrong. Try again.' })
       } finally {
         controller.close()
       }
