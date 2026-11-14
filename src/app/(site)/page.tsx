@@ -159,7 +159,7 @@ export default async function HomePage() {
         <div className='grid gap-3 lg:grid-cols-[2fr_3fr]'>
           {/* El teléfono, escrito: lo primero que busca quien quiere contactar. */}
           <div
-            className='flex flex-wrap items-center justify-between gap-x-5 gap-y-3 rounded-[14px] px-5 py-4'
+            className='flex flex-col items-center justify-center gap-3 rounded-[14px] px-5 py-4 text-center'
             style={{ background: 'var(--card)', border: '1px solid var(--border-strong)' }}>
             <div>
               <p className='site-mono text-[10.5px] font-bold uppercase' style={{ letterSpacing: '0.1em', color: 'var(--muted)' }}>
@@ -169,7 +169,7 @@ export default async function HomePage() {
                 {phone}
               </a>
             </div>
-            <div className='flex flex-wrap gap-2'>
+            <div className='grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:justify-center'>
               <a
                 href={wa.href}
                 {...tabProps(wa.href)}
