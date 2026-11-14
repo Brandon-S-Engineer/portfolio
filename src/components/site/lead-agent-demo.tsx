@@ -3,10 +3,13 @@
 // Demo del proyecto 02: lead agent en Python (FastAPI + LangGraph + MCP) que
 // corre en un servicio aparte. Flujo: mensaje entrante → grafo en vivo →
 // pausa para aprobación humana → ejecución vía MCP → el kanban del CRM cambia.
+// Abre con una corrida real guardada, detenida justo en la aprobación, para que
+// se vea sin hacer clic; al correr un lead, todo pasa a ser en vivo.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Circle, Loader2, PauseCircle, Send, X } from 'lucide-react'
 import { site } from '@/content/site'
+import { leadRun } from '@/content/recorded-runs'
 
 const API = process.env.NEXT_PUBLIC_LEAD_AGENT_URL || site.leadAgentUrl
 
@@ -31,6 +34,12 @@ const THINKING: Record<string, string[]> = {
 
 const STAGES = ['new', 'qualified', 'quoted', 'won', 'lost'] as const
 
+// Nodos que la corrida guardada ya terminó (se detuvo en la aprobación).
+const RECORDED_DONE = ['qualify', 'lookup', 'draft_reply', 'propose_actions']
+// El free tier puede tardar en despertar: se reintenta antes de darlo por caído.
+const HEALTH_TRIES = 3
+const HEALTH_WAIT_MS = 5000
+
 const PRESETS = [
   {
     label: 'Hot lead + trade-in',
@@ -38,28 +47,25 @@ const PRESETS = [
     contact: 'carlos@example.com',
     message: 'Hola! busco un iPhone 15 Pro, tengo como 19 mil y lo necesito esta semana. ¿Aceptan mi iPhone 12 a cuenta?',
   },
-  {
-    label: 'Browsing, low budget',
-    name: 'Emily',
-    contact: 'emily@example.com',
-    message: "Hi, just looking. Do you have anything decent under 8,000 pesos? No rush.",
-  },
   { label: 'Spam', name: '', contact: '+52 55 9999 0000', message: 'CLICK HERE to win FREE bitcoin!!! www.win-btc.xyz' },
 ]
 
-type Action = { tool: string; args: Record<string, unknown>; why: string }
-type Qualification = { intent: string; score: number; urgency: string; budget_mxn: number | null; summary: string }
+export type Action = { tool: string; args: Record<string, unknown>; why: string }
+export type Qualification = { intent: string; score: number; urgency: string; budget_mxn: number | null; summary: string }
 type Contact = { id: number; contact_key: string; name: string | null; interest: string | null; score: number | null; stage: string }
 
 export default function LeadAgentDemo() {
   const [awake, setAwake] = useState<'waking' | 'up' | 'down'>('waking')
   const [form, setForm] = useState(PRESETS[0])
-  const [done, setDone] = useState<string[]>([])
-  const [active, setActive] = useState<string | null>(null)
-  const [qual, setQual] = useState<Qualification | null>(null)
-  const [reply, setReply] = useState('')
-  const [actions, setActions] = useState<Action[]>([])
-  const [selected, setSelected] = useState<boolean[]>([])
+  // Mientras `recorded` sea true, lo que se ve es la corrida guardada del
+  // primer preset, detenida en la aprobación humana.
+  const [recorded, setRecorded] = useState(true)
+  const [done, setDone] = useState<string[]>(RECORDED_DONE)
+  const [active, setActive] = useState<string | null>('approval')
+  const [qual, setQual] = useState<Qualification | null>(leadRun.qualification)
+  const [reply, setReply] = useState(leadRun.reply)
+  const [actions, setActions] = useState<Action[]>(leadRun.actions)
+  const [selected, setSelected] = useState<boolean[]>(leadRun.actions.map(() => true))
   const [threadId, setThreadId] = useState<string | null>(null)
   const [phase, setPhase] = useState<'idle' | 'running' | 'approval' | 'executing' | 'finished'>('idle')
   const [results, setResults] = useState<{ tool: string; result: unknown }[]>([])
@@ -67,7 +73,7 @@ export default function LeadAgentDemo() {
   const [error, setError] = useState('')
   const [model, setModel] = useState('')
   // Tiempos por nodo para que se vea dónde se va la latencia.
-  const [times, setTimes] = useState<Record<string, number>>({})
+  const [times, setTimes] = useState<Record<string, number>>(leadRun.times)
   const [now, setNow] = useState(0)
   const stepStart = useRef(0)
   const runStart = useRef(0)
@@ -81,16 +87,20 @@ export default function LeadAgentDemo() {
   // carga la página, mucho antes de que el visitante llegue a esta sección.
   useEffect(() => {
     let alive = true
-    fetch(`${API}/health`)
-      .then(async (r) => {
+    ;(async () => {
+      for (let i = 0; i < HEALTH_TRIES && alive; i++) {
+        const r = await fetch(`${API}/health`).catch(() => null)
         if (!alive) return
-        setAwake(r.ok ? 'up' : 'down')
-        if (r.ok) {
+        if (r?.ok) {
+          setAwake('up')
           setModel((await r.json()).model ?? '')
           loadCrm()
+          return
         }
-      })
-      .catch(() => alive && setAwake('down'))
+        if (i < HEALTH_TRIES - 1) await new Promise((res) => setTimeout(res, HEALTH_WAIT_MS))
+      }
+      if (alive) setAwake('down')
+    })()
     return () => {
       alive = false
     }
@@ -143,6 +153,7 @@ export default function LeadAgentDemo() {
   }
 
   async function run() {
+    setRecorded(false)
     setDone([])
     setActive('qualify')
     setQual(null)
@@ -219,6 +230,11 @@ export default function LeadAgentDemo() {
               {awake === 'up' ? 'Python service up' : awake === 'down' ? 'service offline' : 'waking Python service…'}
             </span>
           </div>
+          {recorded && (
+            <p className='mt-3 text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+              On the right is a saved run of the hot lead. Now run one <b style={{ color: 'var(--fg)' }}>live</b>:
+            </p>
+          )}
           <div className='mt-3 flex flex-wrap gap-2'>
             {PRESETS.map((p) => (
               <button
@@ -271,7 +287,7 @@ export default function LeadAgentDemo() {
             disabled={busy || awake === 'down' || form.message.trim().length < 3 || form.contact.trim().length < 5}
             className='site-btn site-btn-accent site-cta mt-2 h-11 w-full justify-center text-[14.5px] disabled:opacity-50'>
             {phase === 'running' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}
-            Run the agent
+            {recorded ? 'Run the agent live' : 'Run the agent'}
           </button>
           {error && (
             <p className='mt-2 text-[13px]' style={{ color: 'var(--accent)' }}>
@@ -280,7 +296,7 @@ export default function LeadAgentDemo() {
           )}
 
           {/* GRAPH */}
-          <p className='site-kicker mt-6'>LangGraph · live</p>
+          <p className='site-kicker mt-6'>{recorded ? 'What the agent did · LangGraph' : 'LangGraph · live'}</p>
           <ol className='mt-2 space-y-1.5'>
             {NODES.map((n) => {
               const isDone = done.includes(n.id) || (n.id === 'approval' && (phase === 'executing' || phase === 'finished'))
@@ -303,6 +319,11 @@ export default function LeadAgentDemo() {
                       {(times[n.id] / 1000).toFixed(1)}s
                     </span>
                   )}
+                  {isActive && n.id === 'approval' && (
+                    <span className='site-mono ml-auto shrink-0 text-[11px] font-bold' style={{ color: 'var(--accent)' }}>
+                      stopped here
+                    </span>
+                  )}
                 </li>
               )
             })}
@@ -315,6 +336,21 @@ export default function LeadAgentDemo() {
             <p className='text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
               Pick a lead and run it. The agent <b>stops</b> before changing anything, until you approve.
             </p>
+          )}
+          {recorded && (
+            <p className='site-mono mb-3 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold' style={{ background: 'var(--card)', color: 'var(--muted)' }}>
+              recorded run · real output · {leadRun.model}
+            </p>
+          )}
+          {(recorded || phase === 'approval') && (
+            <div
+              className='mb-3 flex items-center gap-2.5 rounded-[12px] px-3.5 py-3 text-[14px]'
+              style={{ background: 'var(--card)', border: '1.5px solid var(--accent)', lineHeight: 1.4 }}>
+              <PauseCircle className='h-5 w-5 shrink-0' style={{ color: 'var(--accent)' }} />
+              <span>
+                <b>Paused before any write.</b> Nothing changes in the CRM until a person approves.
+              </span>
+            </div>
           )}
           {busy && (
             <div
@@ -349,7 +385,7 @@ export default function LeadAgentDemo() {
               {[
                 ['intent', qual.intent],
                 ['score', `${qual.score}/100`],
-                ['urgency', qual.urgency],
+                ['urgency', qual.urgency.replace(/_/g, ' ')],
               ].map(([k, v]) => (
                 <div key={k} className='rounded-[10px] p-2' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                   <div style={{ color: 'var(--muted)' }}>{k}</div>
@@ -391,7 +427,7 @@ export default function LeadAgentDemo() {
           )}
           {actions.length > 0 && (
             <div className='mt-4'>
-              <p className='site-kicker'>Proposed CRM actions {phase === 'approval' && '· waiting for you'}</p>
+              <p className='site-kicker'>Proposed CRM actions {(phase === 'approval' || recorded) && '· waiting for approval'}</p>
               <ul className='mt-1.5 space-y-1.5'>
                 {actions.map((a, i) => {
                   // Se ejecutan en orden solo las seleccionadas.
@@ -426,6 +462,11 @@ export default function LeadAgentDemo() {
                   )
                 })}
               </ul>
+              {recorded && (
+                <p className='mt-3 text-[13px]' style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+                  This run stopped here. Run the agent live to approve or reject its actions yourself.
+                </p>
+              )}
               {phase === 'approval' && (
                 <div className='mt-3 flex gap-2'>
                   <button

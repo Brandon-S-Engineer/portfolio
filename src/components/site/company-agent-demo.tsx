@@ -1,13 +1,19 @@
 'use client'
 
 // Demo embebido del home: chat con el agente real (RAG + SQL) a la izquierda y,
-// a la derecha, la traza en vivo de cómo se construyó cada respuesta.
+// a la derecha, la traza de cómo se construyó cada respuesta. Abre con una
+// corrida real guardada, para que la prueba se vea sin hacer clic; al preguntar
+// algo, todo pasa a ser una llamada en vivo.
 
 import { useRef, useState } from 'react'
 import { ArrowUp, Code2, Database, FileSearch, Loader2, RotateCcw, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { suggestedQuestions } from '@/lib/agent-demo/data'
 import { SYSTEM_PROMPT, toolSpecs } from '@/lib/agent-demo/specs'
+import { answerRun } from '@/content/recorded-runs'
+
+// Dos preguntas para probar en vivo: una de inventario (SQL) y una de políticas (RAG).
+const LIVE_QUESTIONS = [suggestedQuestions[1], suggestedQuestions[3]]
 
 // Debe coincidir con MODELS en lib/agent-demo/openai.ts (solo modelos baratos).
 const MODEL_OPTIONS = [
@@ -16,9 +22,9 @@ const MODEL_OPTIONS = [
   { id: 'gpt-4.1-mini', label: 'gpt-4.1-mini · fastest' },
 ]
 
-type Msg = { role: 'user' | 'assistant'; content: string }
+export type Msg = { role: 'user' | 'assistant'; content: string }
 type Source = { id: string; title: string; heading: string; score: number }
-type TraceEvent =
+export type TraceEvent =
   | { type: 'delta'; text: string }
   | { type: 'llm'; step: number; ms: number; input: number; output: number }
   | { type: 'tool_call'; id: string; name: string; args: string }
@@ -29,10 +35,11 @@ type TraceEvent =
 const toolIcon = { search_docs: FileSearch, find_products: Database, get_order: Database } as Record<string, typeof Database>
 
 export default function CompanyAgentDemo() {
-  const [messages, setMessages] = useState<Msg[]>([])
-  const [trace, setTrace] = useState<TraceEvent[]>([])
-  // Como en los otros dos sistemas: ya hay algo elegido, solo falta apretar.
-  const [input, setInput] = useState(suggestedQuestions[0])
+  // Mientras `recorded` sea true, lo que se ve es la corrida guardada.
+  const [recorded, setRecorded] = useState(true)
+  const [messages, setMessages] = useState<Msg[]>(answerRun.messages)
+  const [trace, setTrace] = useState<TraceEvent[]>(answerRun.trace)
+  const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [model, setModel] = useState('gpt-4.1-mini')
   const [streaming, setStreaming] = useState('')
@@ -42,7 +49,9 @@ export default function CompanyAgentDemo() {
   async function ask(text: string) {
     const q = text.trim()
     if (!q || busy) return
-    const next: Msg[] = [...messages, { role: 'user', content: q }]
+    // La corrida guardada no forma parte de la conversación en vivo.
+    const next: Msg[] = [...(recorded ? [] : messages), { role: 'user', content: q }]
+    setRecorded(false)
     setMessages(next)
     setInput('')
     setTrace([])
@@ -93,6 +102,8 @@ export default function CompanyAgentDemo() {
   }
 
   const answer = trace.find((e): e is Extract<TraceEvent, { type: 'answer' }> => e.type === 'answer')
+  // De dónde salió la respuesta, dicho en una línea bajo el chat.
+  const usedTools = [...new Set(trace.flatMap((e) => (e.type === 'tool_call' ? [e.name] : [])))]
 
   return (
     <div
@@ -107,16 +118,22 @@ export default function CompanyAgentDemo() {
           </span>
           <span
             className='site-mono hidden rounded-full px-2 py-0.5 text-[11px] font-bold sm:inline'
-            style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-            live model call · not scripted
+            style={
+              recorded
+                ? { background: 'var(--bg-2)', color: 'var(--muted)' }
+                : { background: 'var(--accent-soft)', color: 'var(--accent)' }
+            }>
+            {recorded ? 'recorded run · real output' : 'live model call · not scripted'}
           </span>
-          {messages.length > 0 && (
+          {!recorded && (
             <button
               type='button'
+              disabled={busy}
               onClick={() => {
-                setMessages([])
-                setTrace([])
-                setInput(suggestedQuestions[0])
+                setRecorded(true)
+                setMessages(answerRun.messages)
+                setTrace(answerRun.trace)
+                setInput('')
               }}
               className='inline-flex items-center gap-1 text-[12.5px]'
               style={{ color: 'var(--muted)' }}>
@@ -126,30 +143,6 @@ export default function CompanyAgentDemo() {
         </div>
 
         <div ref={scrollRef} className='flex-1 space-y-3 overflow-y-auto px-5 py-4'>
-          {messages.length === 0 && (
-            <div>
-              <p className='text-[14px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-                Volt Mobile, a demo phone store. Pick a question or write your own, then press <b style={{ color: 'var(--fg)' }}>Ask</b>. Try to make it hallucinate.
-              </p>
-              <div className='mt-4 flex flex-col gap-2'>
-                {suggestedQuestions.map((q) => (
-                  <button
-                    key={q}
-                    type='button'
-                    onClick={() => setInput(q)}
-                    aria-pressed={input === q}
-                    className='site-pick rounded-[12px] px-3.5 py-2.5 text-left text-[13.5px]'
-                    style={
-                      input === q
-                        ? { border: '1px solid var(--accent)', background: 'var(--accent-soft)' }
-                        : { border: '1px solid var(--border)', background: 'var(--bg-2)' }
-                    }>
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           {messages.map((m, i) => (
             <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
               <div
@@ -177,7 +170,38 @@ export default function CompanyAgentDemo() {
               <Loader2 className='h-3.5 w-3.5 animate-spin' /> Thinking…
             </div>
           )}
+          {!busy && answer && usedTools.length > 0 && (
+            <p className='site-mono inline-flex items-center gap-1.5 text-[11.5px]' style={{ color: 'var(--muted)' }}>
+              <Database className='h-3 w-3' /> looked up with {usedTools.join(' + ')}
+            </p>
+          )}
         </div>
+
+        {recorded && (
+          <div className='px-5 pt-3 pb-1' style={{ borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
+            <p className='text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+              This is a saved run. Now make it answer you, with a <b style={{ color: 'var(--fg)' }}>live model call</b>. Try to make it
+              hallucinate.
+            </p>
+            <div className='mt-2.5 flex flex-wrap gap-2'>
+              {LIVE_QUESTIONS.map((q) => (
+                <button
+                  key={q}
+                  type='button'
+                  onClick={() => setInput(q)}
+                  aria-pressed={input === q}
+                  className='site-pick min-h-[40px] rounded-[11px] px-3.5 py-2 text-left text-[13.5px]'
+                  style={
+                    input === q
+                      ? { border: '1px solid var(--accent)', background: 'var(--accent-soft)' }
+                      : { border: '1px solid var(--border-strong)', background: 'var(--card)' }
+                  }>
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form
           onSubmit={(e) => {
@@ -185,7 +209,7 @@ export default function CompanyAgentDemo() {
             ask(input)
           }}
           className='flex flex-wrap gap-2 p-3'
-          style={{ borderTop: '1px solid var(--border)' }}>
+          style={recorded ? { background: 'var(--bg)' } : { borderTop: '1px solid var(--border)' }}>
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
@@ -203,7 +227,7 @@ export default function CompanyAgentDemo() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             maxLength={1000}
-            placeholder='Ask about an order, a phone or a policy…'
+            placeholder={recorded ? 'Or write your own question…' : 'Ask about an order, a phone or a policy…'}
             aria-label='Message the agent'
             className='h-11 min-w-0 flex-1 rounded-[12px] px-3.5 text-[14px] outline-none focus-visible:ring-2'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}
@@ -213,7 +237,7 @@ export default function CompanyAgentDemo() {
             disabled={busy || !input.trim()}
             aria-label='Send'
             className='site-btn site-btn-accent site-cta h-11 shrink-0 justify-center px-4 text-[14.5px] disabled:opacity-50'>
-            Ask
+            {recorded ? 'Ask live' : 'Ask'}
             <ArrowUp className='h-[18px] w-[18px]' />
           </button>
         </form>
@@ -224,7 +248,7 @@ export default function CompanyAgentDemo() {
         className='flex h-[520px] min-w-0 flex-col'
         style={{ background: 'var(--bg-2)', borderLeft: '1px solid var(--border)' }}>
         <div className='flex items-center justify-between px-5 py-3' style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className='site-kicker'>{showPrompt ? 'Prompt & tools' : 'Live build'}</span>
+          <span className='site-kicker'>{showPrompt ? 'Prompt & tools' : recorded ? 'What the agent did' : 'Live build'}</span>
           <button
             type='button'
             onClick={() => setShowPrompt((v) => !v)}
@@ -253,12 +277,26 @@ export default function CompanyAgentDemo() {
             </p>
           )}
           {!showPrompt && trace.map((ev, i) => {
+            // Cada paso dice en llano qué hizo el modelo; el detalle técnico va al lado.
             if (ev.type === 'llm')
               return (
-                <Row key={i} icon={Sparkles} title={`LLM step ${ev.step + 1}`} meta={`${ev.ms} ms · ${ev.input}→${ev.output} tok`} />
+                <Row
+                  key={i}
+                  icon={Sparkles}
+                  title={trace[i + 1]?.type === 'tool_call' ? 'The model picks a tool' : 'The model writes the answer'}
+                  meta={`${ev.ms} ms · ${ev.input}→${ev.output} tok`}
+                />
               )
             if (ev.type === 'tool_call')
-              return <Row key={i} icon={toolIcon[ev.name] ?? Database} title={ev.name} code={prettyArgs(ev.args)} />
+              return (
+                <Row
+                  key={i}
+                  icon={toolIcon[ev.name] ?? Database}
+                  title={ev.name}
+                  note={ev.name === 'search_docs' ? 'searches the policies' : 'runs a fixed SQL query'}
+                  code={prettyArgs(ev.args)}
+                />
+              )
             if (ev.type === 'tool_result')
               return (
                 <div key={i} className='pl-7'>
@@ -307,7 +345,19 @@ function prettyArgs(args: string) {
   }
 }
 
-function Row({ icon: Icon, title, meta, code }: { icon: typeof Database; title: string; meta?: string; code?: string }) {
+function Row({
+  icon: Icon,
+  title,
+  note,
+  meta,
+  code,
+}: {
+  icon: typeof Database
+  title: string
+  note?: string
+  meta?: string
+  code?: string
+}) {
   return (
     <div>
       <div className='flex items-center justify-between gap-2'>
@@ -317,7 +367,15 @@ function Row({ icon: Icon, title, meta, code }: { icon: typeof Database; title: 
             style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             <Icon className='h-3 w-3' />
           </span>
-          {title}
+          <span>
+            <span className={note ? 'site-mono text-[12.5px]' : undefined}>{title}</span>
+            {note && (
+              <span className='font-normal' style={{ color: 'var(--muted)' }}>
+                {' '}
+                {note}
+              </span>
+            )}
+          </span>
         </span>
         {meta && (
           <span className='site-mono text-[11.5px]' style={{ color: 'var(--muted)' }}>

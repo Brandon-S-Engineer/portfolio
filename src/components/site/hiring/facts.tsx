@@ -1,13 +1,16 @@
-// Tres datos duros de un sistema, en grande: lo que alguien apunta en sus notas.
+// Tres datos duros de un sistema, en una sola tarjeta con divisores: lo que
+// alguien apunta en sus notas. En móvil se apilan.
 export default function Facts({ items }: { items: [string, string][] }) {
   return (
-    <dl className='mt-5 flex flex-wrap gap-x-8 gap-y-3'>
+    <dl
+      className='grid w-full shrink-0 overflow-hidden rounded-[14px] sm:w-auto sm:auto-cols-fr sm:grid-flow-col'
+      style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       {items.map(([value, label]) => (
-        <div key={value} className='pl-3' style={{ borderLeft: '2px solid var(--accent)' }}>
-          <dt className='site-display text-[19px] leading-tight font-bold' style={{ letterSpacing: '-0.02em' }}>
+        <div key={value} className='site-fact px-[18px] py-3'>
+          <dt className='site-display text-[19px] leading-tight font-bold sm:whitespace-nowrap' style={{ letterSpacing: '-0.02em' }}>
             {value}
           </dt>
-          <dd className='text-[12.5px]' style={{ color: 'var(--muted)' }}>
+          <dd className='mt-0.5 text-[12.5px]' style={{ color: 'var(--muted)' }}>
             {label}
           </dd>
         </div>

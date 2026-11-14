@@ -2,11 +2,14 @@
 
 // Oportunidades reales de hoy + Deal Desk. Al evaluar un anuncio, cada agente
 // aparece en vivo: los que son código o SQL, los LLM (market y risk corren en
-// paralelo) y el veredicto final con la oferta lista para mandar.
+// paralelo) y el veredicto final con la oferta lista para mandar. El panel abre
+// con una corrida real guardada (veredicto arriba, y debajo cómo se llegó a él),
+// para que se vea sin hacer clic.
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, Circle, Clipboard, Code2, Database, Loader2, ShieldAlert, Sparkles } from 'lucide-react'
 import type { AgentId, DeskEvent, DeskResult, Opportunity } from '@/lib/resale/types'
+import { dealRun } from '@/content/recorded-runs'
 
 const mxn = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
@@ -19,20 +22,22 @@ const STEPS: Record<AgentId, { label: string; kind: 'code' | 'SQL' | 'LLM'; hint
   lead: { label: 'Deal lead', kind: 'LLM', hint: 'verdict + offer message', thinking: 'Weighing everything and writing the offer…' },
 }
 
-type StepState = { status: 'start' | 'done' | 'skipped'; ms?: number; tokens?: number; output?: Record<string, unknown>; note?: string }
+export type StepState = { status: 'start' | 'done' | 'skipped'; ms?: number; tokens?: number; output?: Record<string, unknown>; note?: string }
 
 const KIND_ICON = { code: Code2, SQL: Database, LLM: Sparkles }
 
-// Sin scroll: solo los primeros, para que la sección mida lo mismo siempre.
-const MAX_DEALS = 5
+// Dos bastan para probarlo; así la sección mide lo mismo siempre.
+const MAX_DEALS = 2
 
 const SAMPLE = 'iPhone 16 Pro Max 256 $6,000 solo hoy, te lo envío por paquetería, pago por adelantado'
 
 export default function ResaleWorkbench({ opportunities }: { opportunities: Opportunity[] }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [text, setText] = useState('')
-  const [steps, setSteps] = useState<Partial<Record<AgentId, StepState>>>({})
-  const [final, setFinal] = useState<{ result: DeskResult; ms: number; tokens: number; cost: number | null } | null>(null)
+  // Mientras `recorded` sea true, el panel muestra la corrida guardada.
+  const [recorded, setRecorded] = useState(true)
+  const [steps, setSteps] = useState<Partial<Record<AgentId, StepState>>>(dealRun.steps)
+  const [final, setFinal] = useState<{ result: DeskResult; ms: number; tokens: number; cost: number | null } | null>(dealRun.final)
   const [error, setError] = useState('')
   const [running, setRunning] = useState(false)
   const [now, setNow] = useState(0)
@@ -48,6 +53,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
 
   async function evaluate(input: { listingId: string } | { text: string }, key: string) {
     setSelected(key)
+    setRecorded(false)
     setSteps({})
     setFinal(null)
     setError('')
@@ -87,7 +93,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
     }
   }
 
-  const elapsed = ((running ? now : final ? started.current + final.ms : now) - started.current) / 1000
+  const elapsed = recorded ? dealRun.final.ms / 1000 : ((running ? now : final ? started.current + final.ms : now) - started.current) / 1000
 
   return (
     <div className='grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'>
@@ -95,7 +101,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
       <div className='min-w-0 rounded-[16px] p-4' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
         <p className='site-kicker'>Today&apos;s flagged deals · real listings</p>
         <p className='mt-1 text-[13px]' style={{ color: 'var(--muted)' }}>
-          Scored by the CRM against the market. Pick one and let the agents decide.
+          Scored by the CRM against the market. Pick one and let the agents decide, live.
         </p>
         <ul className='mt-3 space-y-1.5'>
           {opportunities.slice(0, MAX_DEALS).map((o) => {
@@ -153,6 +159,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
               className='site-btn site-btn-accent site-cta h-10 flex-1 justify-center text-[14px] disabled:opacity-50'>
               {running && selected === 'text' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Sparkles className='h-4 w-4' />}
               Evaluate {text.trim() ? 'listing' : 'the sample'}
+              {recorded && ' live'}
             </button>
           </div>
         </div>
@@ -163,7 +170,10 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
         <div className='flex items-center justify-between gap-2'>
           <p className='site-kicker'>Deal desk · multi-agent</p>
           {(running || final) && (
-            <span className='site-mono text-[11.5px]' style={{ color: 'var(--muted)' }}>
+            <span
+              className={`site-mono text-[11.5px] ${recorded ? 'rounded-full px-2 py-0.5 text-[11px] font-bold' : ''}`}
+              style={{ color: 'var(--muted)', background: recorded ? 'var(--card)' : undefined }}>
+              {recorded && 'recorded run · real output · '}
               {elapsed.toFixed(1)}s
             </span>
           )}
@@ -182,6 +192,23 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
           </p>
         )}
 
+        {/* La respuesta primero; debajo, cómo se llegó a ella. */}
+        {final && (
+          <>
+            <Verdict
+              f={final}
+              listing={recorded ? final.result.title : undefined}
+              copied={copied}
+              onCopy={() => {
+                navigator.clipboard.writeText(final.result.offerMessage).then(() => setCopied(true))
+              }}
+            />
+            <p className='site-kicker mt-4' style={{ color: 'var(--muted)' }}>
+              How it got there
+            </p>
+          </>
+        )}
+
         <div className='mt-3 space-y-2'>
           {(['parse', 'spec', 'comps'] as AgentId[]).map((id) => (
             <StepCard key={id} id={id} state={steps[id]} />
@@ -198,9 +225,6 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
           <StepCard id='lead' state={steps.lead} />
         </div>
 
-        {final && <Verdict f={final} copied={copied} onCopy={() => {
-          navigator.clipboard.writeText(final.result.offerMessage).then(() => setCopied(true))
-        }} />}
       </div>
     </div>
   )
@@ -330,7 +354,18 @@ function StepOutput({ id, o }: { id: AgentId; o: Record<string, unknown> }) {
   }
 }
 
-function Verdict({ f, copied, onCopy }: { f: { result: DeskResult; ms: number; tokens: number; cost: number | null }; copied: boolean; onCopy: () => void }) {
+function Verdict({
+  f,
+  listing,
+  copied,
+  onCopy,
+}: {
+  f: { result: DeskResult; ms: number; tokens: number; cost: number | null }
+  // El anuncio evaluado, cuando no está a la vista en la lista (corrida guardada).
+  listing?: string
+  copied: boolean
+  onCopy: () => void
+}) {
   const r = f.result
   const tone = r.verdict === 'BUY' ? 'var(--live)' : 'var(--accent)'
   const stats = [
@@ -348,6 +383,11 @@ function Verdict({ f, copied, onCopy }: { f: { result: DeskResult; ms: number; t
         </span>
         <span className='truncate text-[13px] font-medium'>{r.model}</span>
       </div>
+      {listing && (
+        <p className='mt-1 truncate text-[12px]' style={{ color: 'var(--muted)' }}>
+          “{listing}”
+        </p>
+      )}
       <div className='site-mono mt-2 grid grid-cols-3 gap-2 text-[11.5px] sm:grid-cols-5'>
         {stats.map(([k, v]) => (
           <div key={k} className='rounded-[8px] px-2 py-1.5' style={{ background: 'var(--bg-2)' }}>

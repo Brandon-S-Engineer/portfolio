@@ -485,6 +485,58 @@ html:not(.dark) .site-day {
     opacity: calc(var(--o, 1) * 0.25);
   }
 }
+/* Destellos y órbitas: mi versión del cielo. Las órbitas se centran en el botón
+   (--talk-y: su centro vertical dentro del escenario). */
+.talk-spark {
+  border-radius: 0;
+  color: oklch(0.93 0.04 265);
+  filter: drop-shadow(0 0 4px oklch(0.75 0.14 270 / 0.9));
+}
+.talk-orbits {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  --talk-y: 93px;
+}
+.talk-orbit {
+  position: absolute;
+  left: 50%;
+  top: var(--talk-y);
+  border-radius: 50%;
+}
+.talk-orbit-a {
+  width: min(450px, 112%);
+  height: 132px;
+  border: 1px solid oklch(0.8 0.09 268 / 0.3);
+  transform: translate(-50%, -50%) rotate(-7deg);
+}
+.talk-orbit-b {
+  width: min(520px, 128%);
+  height: 176px;
+  border: 1px solid oklch(0.8 0.09 268 / 0.15);
+  transform: translate(-50%, -50%) rotate(6deg);
+}
+.talk-orbit-dot {
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  --o: 1;
+  --tw: 5s;
+}
+.talk-orbit-a .talk-orbit-dot {
+  left: -3px;
+  background: oklch(0.9 0.06 268);
+  box-shadow: 0 0 10px 2px oklch(0.72 0.16 268 / 0.9);
+}
+.talk-orbit-b .talk-orbit-dot {
+  left: auto;
+  right: -3px;
+  background: oklch(0.92 0.06 300);
+  box-shadow: 0 0 10px 2px oklch(0.72 0.17 300 / 0.9);
+  --tw: 6.5s;
+}
 .talk-caption {
   min-height: 20px;
   color: oklch(0.85 0.02 260);
@@ -606,6 +658,17 @@ html:not(.dark) .site-day {
   .talk-sky {
     inset: -30px -24px;
   }
+  .talk-orbits {
+    --talk-y: 89px;
+  }
+  .talk-orbit-a {
+    width: 104%;
+    height: 118px;
+  }
+  .talk-orbit-b {
+    width: 112%;
+    height: 156px;
+  }
   .talk-lg .talk-btn {
     padding: 0 10px 0 18px;
     gap: 10px;
@@ -706,6 +769,28 @@ html:not(.dark) .site-day {
 .site-pick:not(:disabled):hover {
   border-color: var(--accent) !important;
   transform: translateX(2px);
+}
+
+/* Datos duros de un sistema: celdas separadas por una línea. */
+.site-fact + .site-fact {
+  border-top: 1px solid var(--border);
+}
+@media (min-width: 640px) {
+  .site-fact + .site-fact {
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
+}
+
+/* Botón de "How it's built": azul suave y sin brillo, para no competir con la
+   acción de la demo, que es la que debe llamar. */
+.site-built-btn {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent) 45%, transparent);
+}
+.site-built:not([open]) summary:hover .site-built-btn {
+  background: color-mix(in oklch, var(--accent) 18%, transparent);
 }
 
 /* "How it's built" cerrado: tarjeta con borde de acento y botón que brilla.

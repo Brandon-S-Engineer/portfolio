@@ -87,9 +87,41 @@ const STARS = (() => {
   }).filter((s) => s.o > 0.08)
 })()
 
+// Destellos de cuatro puntas: pocos y más grandes que las estrellas.
+const SPARKS = [
+  { left: '9%', top: '20%', size: 14, tw: '5.5s', delay: '-1s' },
+  { left: '88%', top: '70%', size: 12, tw: '4.5s', delay: '-3s' },
+  { left: '74%', top: '10%', size: 9, tw: '6.5s', delay: '-2s' },
+]
+
+// Dos órbitas finas alrededor del botón, cada una con un punto de luz.
+function Orbits() {
+  return (
+    <span className='talk-orbits' aria-hidden='true'>
+      <span className='talk-orbit talk-orbit-a'>
+        <span className='talk-orbit-dot talk-star' />
+      </span>
+      <span className='talk-orbit talk-orbit-b'>
+        <span className='talk-orbit-dot talk-star' />
+      </span>
+    </span>
+  )
+}
+
 function Sky() {
   return (
     <span className='talk-sky' aria-hidden='true'>
+      {SPARKS.map((s, i) => (
+        <svg
+          key={`spark-${i}`}
+          className='talk-star talk-spark'
+          viewBox='0 0 24 24'
+          width={s.size}
+          height={s.size}
+          style={{ left: s.left, top: s.top, animationDelay: s.delay, '--o': 0.95, '--tw': s.tw } as CSSProperties}>
+          <path d='M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.400L1 12l8.400-2.600z' fill='currentColor' />
+        </svg>
+      ))}
       {STARS.map((s, i) => (
         <span
           key={i}
@@ -209,6 +241,7 @@ export default function TalkButton({ copy }: { copy: HiringCopy['talk'] }) {
   return (
     <div id='talk' className='talk-stage mt-4 scroll-mt-28'>
       <Sky />
+      <Orbits />
       <TalkPill
         sub={live ? undefined : copy.sub}
         label={live ? 'End call' : status === 'connecting' ? 'Connecting…' : TALK_LABEL}
