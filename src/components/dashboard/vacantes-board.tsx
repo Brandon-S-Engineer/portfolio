@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { BellOff, Check, ChevronDown, ChevronRight, ExternalLink, Star, Undo2, X } from 'lucide-react'
+import { BellOff, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Star, Undo2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -49,6 +49,25 @@ function tabOf(v: Vacante): TabId {
   if (v.estado === 'GUARDADA') return 'GUARDADA'
   if (v.estado === 'DESCARTADA') return 'DESCARTAR'
   return v.verdict
+}
+
+// Texto listo para pegar en Claude Desktop (que ya tiene mi contexto).
+function jobText(v: Vacante) {
+  return [
+    'Analiza esta vacante con mi contexto: ¿encajo?, ¿qué debo destacar?, y ayúdame con las preguntas de la aplicación.',
+    '',
+    `Puesto: ${v.title}`,
+    v.company && `Empresa: ${v.company}`,
+    v.location && `Ubicación: ${v.location}`,
+    (v.details || v.snippet) && `Detalles: ${v.details || v.snippet}`,
+    `Veredicto de mi CRM: ${v.verdict} · ${v.score ?? '–'}/10${v.expYears != null ? ` · piden ${v.expYears} años` : ''}`,
+    `Link: ${v.url}`,
+    '',
+    'Descripción:',
+    v.description || '(No la tengo: abre la vacante en Indeed para capturarla.)',
+  ]
+    .filter((x) => typeof x === 'string')
+    .join('\n')
 }
 
 function expLabel(v: Vacante) {
@@ -182,6 +201,17 @@ export default function VacantesBoard({ vacantes }: { vacantes: Vacante[] }) {
                     </p>
                   </div>
                   <div className='flex shrink-0 flex-wrap gap-1.5'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() =>
+                        navigator.clipboard
+                          .writeText(jobText(v))
+                          .then(() => toast.success(v.description ? 'Vacante copiada: pégala en Claude' : 'Copiada, pero sin descripción'))
+                          .catch(() => toast.error('No se pudo copiar'))
+                      }>
+                      <Copy className='h-3.5 w-3.5' /> Copiar
+                    </Button>
                     <Button variant='outline' size='sm' onClick={() => window.open(v.url, '_blank')}>
                       <ExternalLink className='h-3.5 w-3.5' /> Abrir
                     </Button>

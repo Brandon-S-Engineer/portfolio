@@ -36,6 +36,7 @@
   const sentCards = new Set() // jk ya enviado como tarjeta
   const sentFull = new Set() // jk ya enviado con descripción
   const verdicts = new Map() // jk → { verdict, score, expYears, estado }
+  const full = new Map() // jk → vacante completa (con descripción) para copiarla
   let queue = []
   let flushTimer = null
   let lastError = null
@@ -107,6 +108,7 @@
       queue.push(c.posting)
     }
     const pane = readPane()
+    if (pane) full.set(pane.jk, pane.posting)
     if (pane && !sentFull.has(pane.jk)) {
       sentFull.add(pane.jk)
       queue.push(pane.posting)
@@ -170,6 +172,7 @@
     const company = readCard(card)?.posting.company
     const btn = 'padding:2px 8px;border-radius:999px;border:1px solid #9ca3af;background:#fff;color:#374151;font:inherit;cursor:pointer'
     bar.innerHTML = `<span class="vac-badge" style="padding:2px 8px;border-radius:999px;color:#fff;background:${color}">${label}</span>
+      <button data-act="copy" style="${btn}">Copiar para Claude</button>
       <button data-act="apply" style="${btn}">${applied ? 'Deshacer' : 'Ya apliqué'}</button>
       ${company ? `<button data-act="mute" style="${btn}">${v.tag === 'SILENCIADA' ? 'Reactivar empresa' : 'Silenciar empresa'}</button>` : ''}`
   }
@@ -189,10 +192,51 @@
       const jk = bar.dataset.jk
       const v = verdicts.get(jk)
       if (!act || !v) return
+      if (act === 'copy') return copyJob(jk, e.target.closest('[data-act]'))
       if (act === 'apply') action({ externalId: `indeed_${jk}`, estado: v.estado === 'APLICADA' ? 'NUEVA' : 'APLICADA' })
       const company = readCard(bar.closest(SEL.card))?.posting.company
       if (act === 'mute' && company) action({ company, mute: v.tag !== 'SILENCIADA' })
     }, true)
+  }
+
+  // ── Copiar la vacante para pegarla en Claude ───────────────────────────────
+
+  function jobText(p, v) {
+    return [
+      'Analiza esta vacante con mi contexto: ¿encajo?, ¿qué debo destacar?, y ayúdame con las preguntas de la aplicación.',
+      '',
+      `Puesto: ${p.title}`,
+      p.company && `Empresa: ${p.company}`,
+      p.location && `Ubicación: ${p.location}`,
+      (p.details || p.snippet) && `Detalles: ${p.details || p.snippet}`,
+      v && `Veredicto de mi CRM: ${LABELS[v.verdict] ?? v.verdict} · ${v.score}/10${v.expYears != null ? ` · piden ${v.expYears} años` : ''}`,
+      `Link: ${p.url}`,
+      '',
+      'Descripción:',
+      p.description || '(No la tengo: abre la vacante en Indeed y vuelve a copiar.)',
+    ].filter((x) => x !== undefined && x !== null && x !== false).join('\n')
+  }
+
+  async function copyJob(jk, btn) {
+    const card = cardByJk(jk)
+    const p = full.get(jk) ?? (card ? readCard(card)?.posting : null)
+    if (!p) return
+    const text = jobText(p, verdicts.get(jk))
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.cssText = 'position:fixed;opacity:0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      ta.remove()
+    }
+    if (btn) {
+      btn.textContent = full.has(jk) ? '✓ Copiada' : '✓ Copiada (sin descripción)'
+      setTimeout(() => { btn.textContent = 'Copiar para Claude' }, 1800)
+    }
   }
 
   // Marcar "ya apliqué" o silenciar una empresa: el CRM responde todas las
