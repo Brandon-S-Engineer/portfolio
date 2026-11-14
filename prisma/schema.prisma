@@ -709,3 +709,9 @@ model JobPosting {
   @@index([verdict])
   @@index([estado])
 }
+
+// Empresas que el usuario silenció (publican en masa): sus vacantes se descartan solas.
+model JobMutedCompany {
+  name      String   @id // nombre en minúsculas, sin espacios de sobra
+  createdAt DateTime @default(now())
+}

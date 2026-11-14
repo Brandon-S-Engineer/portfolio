@@ -17,8 +17,19 @@ export type RawPosting = {
 }
 
 export type Verdict = 'APLICAR' | 'ESTIRAR' | 'DESCARTAR' | 'PENDIENTE'
-export type Reason = { pts: number; why: string }
-export type PostingScore = { verdict: Verdict; score: number; expYears: number | null; reasons: Reason[] }
+export type Tag = 'SILENCIADA' | 'MASIVA' | 'YA_APLICASTE'
+export type Reason = { pts: number; why: string; tag?: Tag }
+export type PostingScore = { verdict: Verdict; score: number; expYears: number | null; reasons: Reason[]; tag: Tag | null }
+
+// Lo que se sabe de la empresa y de republicaciones (lo arma lib/empleos/server).
+export type PostingContext = {
+  muted?: boolean // el usuario silenció a la empresa
+  companyPostings?: number // vacantes distintas de esa empresa en 30 días
+  repost?: 'APLICADA' | 'VISTA' | null // misma empresa y título ya capturados con otro ID
+}
+
+// Desde cuántas vacantes en 30 días se considera que una empresa publica en masa.
+export const MASS_POSTINGS = 8
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
 
@@ -85,13 +96,13 @@ const DEGREE_OPTIONAL = /or equivalent|o experiencia equivalente|o equivalente|p
 const REMOTE = /remot|home ?office|desde casa|teletrabajo|work from home/
 const CDMX = /ciudad de mexico|cdmx|\bd\.?f\.?\b|miguel hidalgo|cuauhtemoc|benito juarez|alvaro obregon|polanco|santa fe|coyoacan|azcapotzalco|naucalpan|tlalnepantla|huixquilucan|interlomas|estado de mexico|\bmex\./
 
-export function scorePosting(p: RawPosting): PostingScore {
+export function scorePosting(p: RawPosting, ctx: PostingContext = {}): PostingScore {
   const title = norm(p.title)
   const body = norm([p.description, p.details, p.snippet].filter(Boolean).join('\n'))
   const all = `${title}\n${body}`
   const hasDescription = (p.description?.trim().length ?? 0) > 200
   const reasons: Reason[] = []
-  const add = (pts: number, why: string) => reasons.push({ pts, why })
+  const add = (pts: number, why: string, tag?: Tag) => reasons.push(tag ? { pts, why, tag } : { pts, why })
 
   // 1) Experiencia
   const expYears = hasDescription ? requiredYears(all) : null
@@ -129,16 +140,31 @@ export function scorePosting(p: RawPosting): PostingScore {
   else if (CDMX.test(loc)) add(0.5, 'En CDMX o área metropolitana')
   else if (loc.trim()) add(-1.5, `Otra ciudad y no dice remoto (${p.location ?? ''})`)
 
-  const score = Math.max(0, Math.min(10, Math.round((5 + reasons.reduce((s, r) => s + r.pts, 0)) * 10) / 10))
+  // 6) Spam: empresas que publican sin parar y vacantes republicadas
+  const mass = (ctx.companyPostings ?? 0) >= MASS_POSTINGS
+  if (ctx.muted) add(-5, 'Silenciaste a esta empresa', 'SILENCIADA')
+  else if (mass) add(-2, `Esta empresa publica en masa (${ctx.companyPostings} vacantes en 30 días)`, 'MASIVA')
+  if (ctx.repost === 'APLICADA') add(-5, 'Ya aplicaste a esta misma vacante (la republicaron)', 'YA_APLICASTE')
+  else if (ctx.repost === 'VISTA') add(-1, 'Republicada: ya habías visto esta misma vacante')
+
+  // Las penalizaciones de spam se restan después del tope de 10, para que una
+  // vacante "perfecta" de una empresa que publica en masa no siga viéndose perfecta.
+  const sum = (rs: Reason[]) => rs.reduce((t, r) => t + r.pts, 0)
+  const clamp = (n: number) => Math.max(0, Math.min(10, Math.round(n * 10) / 10))
+  const spamFrom = reasons.findIndex((r) => r.tag || r.why.startsWith('Republicada'))
+  const fit = spamFrom < 0 ? reasons : reasons.slice(0, spamFrom)
+  const score = clamp(clamp(5 + sum(fit)) + sum(spamFrom < 0 ? [] : reasons.slice(spamFrom)))
 
   let verdict: Verdict
   const noFit = ai.length + web.length === 0
-  if (otherStack && ai.length === 0) verdict = 'DESCARTAR'
+  if (ctx.muted || ctx.repost === 'APLICADA' || (otherStack && ai.length === 0)) verdict = 'DESCARTAR'
   else if (!hasDescription) verdict = 'PENDIENTE'
   else if ((expYears ?? 0) >= 5 || noFit || score < 4) verdict = 'DESCARTAR'
   else if ((expYears ?? 0) >= 3 || senior || score < 6.5) verdict = 'ESTIRAR'
   else verdict = 'APLICAR'
+  // Una empresa que publica en masa nunca sale en verde: que no robe atención.
+  if (mass && verdict === 'APLICAR') verdict = 'ESTIRAR'
 
   if (!hasDescription && verdict === 'PENDIENTE') add(0, 'Falta leer la descripción para ver los años que piden')
-  return { verdict, score, expYears, reasons }
+  return { verdict, score, expYears, reasons, tag: reasons.find((r) => r.tag)?.tag ?? null }
 }

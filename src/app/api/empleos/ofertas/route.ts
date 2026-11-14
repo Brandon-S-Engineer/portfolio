@@ -8,7 +8,8 @@ import { prisma } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireSessionOrApiKey, CORS_HEADERS, corsOk } from '@/lib/api-auth'
-import { scorePosting } from '@/lib/empleos/score'
+import { MASS_POSTINGS, scorePosting } from '@/lib/empleos/score'
+import { postingContext, rescoreCompany, toResult } from '@/lib/empleos/server'
 
 const postingSchema = z.object({
   externalId: z.string().min(3).max(120),
@@ -45,7 +46,8 @@ export async function POST(req: Request) {
 
   let created = 0
   let updated = 0
-  const results: { externalId: string; verdict: string; score: number; expYears: number | null; estado: string }[] = []
+  const results = new Map<string, ReturnType<typeof toResult>>()
+  const newByCompany = new Map<string, number>()
 
   for (const p of parsed.data) {
     try {
@@ -60,7 +62,7 @@ export async function POST(req: Request) {
         details: p.details ?? existing?.details ?? null,
         description: p.description ?? existing?.description ?? null,
       }
-      const s = scorePosting(merged)
+      const s = scorePosting(merged, await postingContext({ ...merged, externalId: p.externalId }))
       const data = { ...merged, expYears: s.expYears, verdict: s.verdict, score: s.score, reasons: s.reasons, lastSeenAt: new Date() }
       const row = await prisma.jobPosting.upsert({
         where: { externalId: p.externalId },
@@ -68,12 +70,23 @@ export async function POST(req: Request) {
         update: data,
       })
       if (existing) updated++
-      else created++
-      results.push({ externalId: row.externalId, verdict: row.verdict, score: s.score, expYears: s.expYears, estado: row.estado })
+      else {
+        created++
+        if (row.company) newByCompany.set(row.company, (newByCompany.get(row.company) ?? 0) + 1)
+      }
+      results.set(row.externalId, toResult(row))
     } catch (err) {
       console.error(`empleos POST falló para ${p.externalId}:`, err)
     }
   }
 
-  return NextResponse.json({ created, updated, results }, { status: 201, headers: CORS_HEADERS })
+  // Una empresa que llega al umbral de "publica en masa" con este lote: se
+  // recalculan todas sus vacantes para que ninguna se quede en verde.
+  for (const company of newByCompany.keys()) {
+    const total = await prisma.jobPosting.count({ where: { company: { equals: company, mode: 'insensitive' } } })
+    if (total < MASS_POSTINGS) continue
+    for (const row of await rescoreCompany(company)) if (results.has(row.externalId)) results.set(row.externalId, toResult(row))
+  }
+
+  return NextResponse.json({ created, updated, results: [...results.values()] }, { status: 201, headers: CORS_HEADERS })
 }

@@ -13,6 +13,7 @@ export default async function EmpleosPage() {
 
   const vacantes: Vacante[] = rows.map((r) => ({
     id: r.id,
+    externalId: r.externalId,
     url: r.url,
     title: r.title,
     company: r.company,
@@ -23,7 +24,7 @@ export default async function EmpleosPage() {
     expYears: r.expYears,
     verdict: r.verdict as Vacante['verdict'],
     score: r.score,
-    reasons: Array.isArray(r.reasons) ? (r.reasons as { pts: number; why: string }[]) : [],
+    reasons: Array.isArray(r.reasons) ? (r.reasons as Vacante['reasons']) : [],
     estado: r.estado as Vacante['estado'],
     appliedAt: r.appliedAt ? r.appliedAt.toISOString() : null,
     firstSeenAt: r.firstSeenAt.toISOString(),

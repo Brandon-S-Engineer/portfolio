@@ -38,6 +38,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     postJobs(msg.payload).then((result) => sendResponse(result))
     return true
   }
+  if (msg.type === 'JOBS_ACTION') {
+    postJobs(msg.payload, '/api/empleos/accion').then((result) => sendResponse(result))
+    return true
+  }
   if (msg.type === 'SYNC_RELOAD_ALARMS') {
     syncReloadAlarms().then(() => sendResponse({ ok: true }))
     return true
@@ -224,13 +228,13 @@ async function postElecListings(payload) {
 
 // ── Vacantes (Indeed) ────────────────────────────────────────────────────────
 
-async function postJobs(payload) {
+async function postJobs(payload, path = '/api/empleos/ofertas') {
   const settings = await getSettings()
   if (!settings.crmUrl || !settings.crmApiKey) {
     return { ok: false, error: 'CRM no configurado (opciones → Conexión al CRM)' }
   }
   try {
-    const res = await fetch(`${settings.crmUrl.replace(/\/$/, '')}/api/empleos/ofertas`, {
+    const res = await fetch(`${settings.crmUrl.replace(/\/$/, '')}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -239,6 +243,7 @@ async function postJobs(payload) {
       body: JSON.stringify(payload),
     })
     if (res.status === 401) return { ok: false, error: 'API key inválida' }
+    if (res.status === 404) return { ok: false, error: 'Esa vacante todavía no está en el CRM' }
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
     return { ok: true, data: await res.json() }
   } catch (err) {

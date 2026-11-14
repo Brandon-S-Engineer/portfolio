@@ -140,26 +140,55 @@
 
   // ── Veredicto pintado en cada tarjeta ──────────────────────────────────────
 
+  const TAGS = { MASIVA: 'Publica en masa', SILENCIADA: 'Empresa silenciada', YA_APLICASTE: 'Ya aplicaste (republicada)' }
+
   function paint(card, jk) {
     const v = verdicts.get(jk)
     if (!v) return
-    const sig = `${v.verdict}|${v.score}|${v.expYears}|${v.estado}`
+    const sig = `${v.verdict}|${v.score}|${v.expYears}|${v.estado}|${v.tag}`
     if (card.dataset.vacSig === sig) return
     card.dataset.vacSig = sig
-    const color = v.estado === 'APLICADA' ? '#2563eb' : COLORS[v.verdict] ?? COLORS.PENDIENTE
+    const applied = v.estado === 'APLICADA'
+    // Lo que no debe llamar la atención va en gris, no en rojo ni en verde.
+    const quiet = v.tag || v.estado === 'DESCARTADA'
+    const color = applied ? '#2563eb' : quiet ? '#9ca3af' : COLORS[v.verdict] ?? COLORS.PENDIENTE
     card.style.boxShadow = `inset 4px 0 0 ${color}`
-    card.style.opacity = v.verdict === 'DESCARTAR' || v.estado === 'DESCARTADA' ? '0.55' : ''
-    let badge = card.querySelector('.vac-badge')
-    if (!badge) {
-      badge = document.createElement('div')
-      badge.className = 'vac-badge'
-      badge.style.cssText = 'display:inline-block;margin:0 0 6px 0;padding:2px 8px;border-radius:999px;color:#fff;font:600 11px/1.5 system-ui,sans-serif'
-      card.prepend(badge)
+    card.style.opacity = !applied && (quiet || v.verdict === 'DESCARTAR') ? '0.5' : ''
+
+    let bar = card.querySelector('.vac-bar')
+    if (!bar) {
+      bar = document.createElement('div')
+      bar.className = 'vac-bar'
+      bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 6px 0;font:600 11px/1.5 system-ui,sans-serif'
+      // Los clics en la barra no deben abrir la vacante.
+      bar.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault() })
+      card.prepend(bar)
     }
-    badge.style.background = color
     const read = v.verdict === 'APLICAR' || v.verdict === 'ESTIRAR'
     const exp = v.expYears != null ? ` · piden ${v.expYears} año${v.expYears > 1 ? 's' : ''}` : read ? ' · sin mínimo de años' : ''
-    badge.textContent = v.estado === 'APLICADA' ? 'Ya aplicaste' : `${LABELS[v.verdict] ?? v.verdict} · ${v.score}/10${exp}`
+    const label = applied ? '✓ Ya aplicaste' : v.estado === 'DESCARTADA' ? 'La quitaste' : TAGS[v.tag] ?? `${LABELS[v.verdict] ?? v.verdict} · ${v.score}/10${exp}`
+    const company = readCard(card)?.posting.company
+    const btn = 'padding:2px 8px;border-radius:999px;border:1px solid #9ca3af;background:#fff;color:#374151;font:inherit;cursor:pointer'
+    bar.innerHTML = `<span class="vac-badge" style="padding:2px 8px;border-radius:999px;color:#fff;background:${color}">${label}</span>
+      <button data-act="apply" style="${btn}">${applied ? 'Deshacer' : 'Ya apliqué'}</button>
+      ${company ? `<button data-act="mute" style="${btn}">${v.tag === 'SILENCIADA' ? 'Reactivar empresa' : 'Silenciar empresa'}</button>` : ''}`
+    bar.querySelector('[data-act="apply"]').onclick = () => action({ externalId: `indeed_${jk}`, estado: applied ? 'NUEVA' : 'APLICADA' })
+    const muteBtn = bar.querySelector('[data-act="mute"]')
+    if (muteBtn) muteBtn.onclick = () => action({ company, mute: v.tag !== 'SILENCIADA' })
+  }
+
+  // Marcar "ya apliqué" o silenciar una empresa: el CRM responde todas las
+  // vacantes que cambiaron (las de la misma empresa) y se repintan.
+  async function action(payload) {
+    try {
+      const res = await chrome.runtime.sendMessage({ type: 'JOBS_ACTION', payload })
+      if (!res?.ok) throw new Error(res?.error ?? 'Sin respuesta de la extensión')
+      lastError = null
+      for (const r of res.data.results ?? []) verdicts.set(r.externalId.replace(/^indeed_/, ''), r)
+    } catch (err) {
+      lastError = err.message
+    }
+    scan()
   }
 
   // ── Indicador ──────────────────────────────────────────────────────────────
@@ -176,8 +205,8 @@
       statusEl.innerHTML = '<div data-info></div>'
       document.body.appendChild(statusEl)
     }
-    const count = (v) => cards.filter((c) => verdicts.get(c.jk)?.verdict === v).length
-    const pending = cards.filter((c) => !sentFull.has(c.jk) && verdicts.get(c.jk)?.verdict !== 'DESCARTAR').length
+    const count = (v) => cards.filter((c) => verdicts.get(c.jk)?.verdict === v && !verdicts.get(c.jk)?.tag).length
+    const pending = cards.filter((c) => !sentFull.has(c.jk) && verdicts.get(c.jk)?.verdict !== 'DESCARTAR' && !verdicts.get(c.jk)?.tag).length
     const info = `<strong>Vacantes → CRM</strong><br>
       ${cards.length} en esta página · <span style="color:#86efac">${count('APLICAR')} aplicar</span> ·
       <span style="color:#fcd34d">${count('ESTIRAR')} estirar</span> · <span style="color:#fca5a5">${count('DESCARTAR')} descartar</span>
@@ -194,7 +223,7 @@
   let scanTimer = null
   const scheduleScan = () => { clearTimeout(scanTimer); scanTimer = setTimeout(scan, 500) }
   // Ignora los cambios que hace este mismo script (indicador y etiquetas).
-  const own = (n) => n === statusEl || statusEl?.contains(n) || n.classList?.contains('vac-badge')
+  const own = (n) => n === statusEl || statusEl?.contains(n) || !!n.closest?.('.vac-bar') || n.parentElement?.closest?.('.vac-bar')
   new MutationObserver((muts) => {
     if (muts.every((m) => own(m.target) || (m.addedNodes.length > 0 && [...m.addedNodes].every(own)))) return
     scheduleScan()

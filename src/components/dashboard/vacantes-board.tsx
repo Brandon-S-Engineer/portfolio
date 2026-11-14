@@ -3,12 +3,13 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Check, ChevronDown, ChevronRight, ExternalLink, Star, Undo2, X } from 'lucide-react'
+import { BellOff, Check, ChevronDown, ChevronRight, ExternalLink, Star, Undo2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 export type Vacante = {
   id: string
+  externalId: string
   url: string
   title: string
   company: string | null
@@ -19,7 +20,7 @@ export type Vacante = {
   expYears: number | null
   verdict: 'APLICAR' | 'ESTIRAR' | 'DESCARTAR' | 'PENDIENTE'
   score: number | null
-  reasons: { pts: number; why: string }[]
+  reasons: { pts: number; why: string; tag?: 'SILENCIADA' | 'MASIVA' | 'YA_APLICASTE' }[]
   estado: 'NUEVA' | 'GUARDADA' | 'APLICADA' | 'DESCARTADA'
   appliedAt: string | null
   firstSeenAt: string
@@ -32,7 +33,7 @@ const TABS = [
   { id: 'PENDIENTE', label: 'Falta leer', hint: 'Solo se capturó la tarjeta: ábrela en Indeed y la descripción se captura sola' },
   { id: 'GUARDADA', label: 'Guardadas', hint: 'Las que marcaste para después' },
   { id: 'APLICADA', label: 'Aplicadas', hint: 'Ya mandaste tu CV' },
-  { id: 'DESCARTAR', label: 'Descartadas', hint: 'Fuera de alcance, de otro stack, o las que quitaste tú' },
+  { id: 'DESCARTAR', label: 'Descartadas', hint: 'Fuera de alcance, de otro stack, de empresas silenciadas, o las que quitaste tú' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
@@ -70,23 +71,45 @@ export default function VacantesBoard({ vacantes }: { vacantes: Vacante[] }) {
 
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return rows.filter(
-      (r) => tabOf(r) === tab && (!needle || `${r.title} ${r.company ?? ''} ${r.location ?? ''}`.toLowerCase().includes(needle)),
-    )
+    const tagged = (r: Vacante) => (r.reasons.some((x) => x.tag) ? 1 : 0)
+    // Lo de empresas que publican en masa va al final de cada pestaña.
+    return rows
+      .filter((r) => tabOf(r) === tab && (!needle || `${r.title} ${r.company ?? ''} ${r.location ?? ''}`.toLowerCase().includes(needle)))
+      .sort((a, b) => tagged(a) - tagged(b) || (b.score ?? 0) - (a.score ?? 0))
   }, [rows, tab, q])
 
-  async function setEstado(v: Vacante, estado: Vacante['estado']) {
+  // El servidor responde las vacantes afectadas (al silenciar una empresa o
+  // aplicar a una republicada cambian varias a la vez).
+  async function act(body: Record<string, unknown>, optimistic?: (rs: Vacante[]) => Vacante[]) {
     const prev = rows
-    setRows((rs) => rs.map((r) => (r.id === v.id ? { ...r, estado } : r)))
-    const res = await fetch(`/api/empleos/ofertas/${v.id}`, {
-      method: 'PATCH',
+    if (optimistic) setRows(optimistic)
+    const res = await fetch('/api/empleos/accion', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado }),
+      body: JSON.stringify(body),
     }).catch(() => null)
     if (!res?.ok) {
       setRows(prev)
       toast.error('No se pudo guardar el cambio')
+      return
     }
+    type Fresh = Pick<Vacante, 'id' | 'verdict' | 'score' | 'expYears' | 'estado' | 'reasons'>
+    const fresh = new Map<string, Fresh>(((await res.json()).rows as Fresh[]).map((r) => [r.id, r]))
+    setRows((rs) =>
+      rs.map((r) => {
+        const f = fresh.get(r.id)
+        return f ? { ...r, verdict: f.verdict, score: f.score, expYears: f.expYears, estado: f.estado, reasons: f.reasons } : r
+      }),
+    )
+  }
+
+  const setEstado = (v: Vacante, estado: Vacante['estado']) =>
+    act({ externalId: v.externalId, estado }, (rs) => rs.map((r) => (r.id === v.id ? { ...r, estado } : r)))
+
+  async function mute(v: Vacante, on: boolean) {
+    if (!v.company) return
+    await act({ company: v.company, mute: on })
+    toast.success(on ? `${v.company} silenciada: sus vacantes ya no llaman la atención` : `${v.company} reactivada`)
   }
 
   const current = TABS.find((t) => t.id === tab)!
@@ -120,8 +143,9 @@ export default function VacantesBoard({ vacantes }: { vacantes: Vacante[] }) {
         <ul className='space-y-2'>
           {visible.map((v) => {
             const isOpen = open === v.id
+            const tag = v.reasons.find((r) => r.tag)?.tag
             return (
-              <li key={v.id} className='rounded-lg border bg-card'>
+              <li key={v.id} className={cn('rounded-lg border bg-card', tag && 'opacity-60')}>
                 <div className='flex flex-wrap items-start gap-3 p-3'>
                   <button
                     type='button'
@@ -139,6 +163,11 @@ export default function VacantesBoard({ vacantes }: { vacantes: Vacante[] }) {
                         {v.score ?? '–'}/10
                       </span>
                       <span className='rounded-full border px-2 py-0.5 text-xs'>{expLabel(v)}</span>
+                      {tag && (
+                        <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
+                          {tag === 'MASIVA' ? 'Publica en masa' : tag === 'SILENCIADA' ? 'Empresa silenciada' : 'Ya aplicaste (republicada)'}
+                        </span>
+                      )}
                     </div>
                     <p className='mt-0.5 text-sm text-muted-foreground'>
                       {[v.company, v.location, v.snippet].filter(Boolean).join(' · ')}
@@ -173,6 +202,11 @@ export default function VacantesBoard({ vacantes }: { vacantes: Vacante[] }) {
                     ) : (
                       <Button variant='ghost' size='sm' onClick={() => setEstado(v, 'NUEVA')}>
                         <Undo2 className='h-3.5 w-3.5' /> Deshacer
+                      </Button>
+                    )}
+                    {v.company && (
+                      <Button variant='ghost' size='sm' onClick={() => mute(v, tag !== 'SILENCIADA')}>
+                        <BellOff className='h-3.5 w-3.5' /> {tag === 'SILENCIADA' ? 'Reactivar empresa' : 'Silenciar empresa'}
                       </Button>
                     )}
                   </div>
