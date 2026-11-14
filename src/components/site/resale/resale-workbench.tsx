@@ -56,14 +56,18 @@ const T = {
     ceiling: 'price ceiling',
     resale: 'resale',
     demand: 'demand',
+    levels: { low: 'low', medium: 'medium', high: 'high' } as Record<string, string>,
     risk: (level: string) => `${level} risk`,
     haircut: 'haircut',
     stats: { asking: 'Asking', maxBuy: 'Max buy', resale: 'Resale', margin: 'Margin', sellsIn: 'Sells in' },
     verdict: { BUY: 'BUY', NEGOTIATE: 'NEGOTIATE', PASS: 'PASS' } as Record<string, string>,
-    message: 'Message to the seller (Spanish)',
+    message: 'Message to the seller',
     copy: 'Copy message',
     footer: 'numbers by code, judgment by LLM',
     failed: 'Request failed',
+    kinds: { code: 'code', SQL: 'SQL', LLM: 'LLM' } as Record<string, string>,
+    // Los títulos de anuncios reales están en español: en inglés no se muestran.
+    showTitles: false,
   },
   es: {
     steps: {
@@ -104,6 +108,7 @@ const T = {
     ceiling: 'precio tope',
     resale: 'reventa',
     demand: 'demanda',
+    levels: { low: 'baja', medium: 'media', high: 'alta' } as Record<string, string>,
     risk: (level: string) => `riesgo ${({ low: 'bajo', medium: 'medio', high: 'alto' } as Record<string, string>)[level] ?? level}`,
     haircut: 'descuento',
     stats: { asking: 'Pide', maxBuy: 'Máx. compra', resale: 'Reventa', margin: 'Margen', sellsIn: 'Se vende en' },
@@ -112,6 +117,8 @@ const T = {
     copy: 'Copiar mensaje',
     footer: 'números por código, criterio por LLM',
     failed: 'La solicitud falló',
+    kinds: { code: 'código', SQL: 'SQL', LLM: 'LLM' } as Record<string, string>,
+    showTitles: true,
   },
 }
 type Dict = (typeof T)['en']
@@ -123,16 +130,21 @@ const KIND_ICON = { code: Code2, SQL: Database, LLM: Sparkles }
 // Dos bastan para probarlo; así la sección mide lo mismo siempre.
 const MAX_DEALS = 2
 
-const SAMPLE = 'iPhone 16 Pro Max 256 $6,000 solo hoy, te lo envío por paquetería, pago por adelantado'
+const SAMPLE = {
+  en: "iPhone 16 Pro Max 256GB $6,000 today only, I'll ship it to you, payment upfront",
+  es: 'iPhone 16 Pro Max 256 $6,000 solo hoy, te lo envío por paquetería, pago por adelantado',
+}
 
 export default function ResaleWorkbench({ opportunities, locale = 'en' }: { opportunities: Opportunity[]; locale?: Locale }) {
   const t = T[locale]
+  const run = dealRun[locale]
+  const sample = SAMPLE[locale]
   const [selected, setSelected] = useState<string | null>(null)
   const [text, setText] = useState('')
   // Mientras `recorded` sea true, el panel muestra la corrida guardada.
   const [recorded, setRecorded] = useState(true)
-  const [steps, setSteps] = useState<Partial<Record<AgentId, StepState>>>(dealRun.steps)
-  const [final, setFinal] = useState<{ result: DeskResult; ms: number; tokens: number; cost: number | null } | null>(dealRun.final)
+  const [steps, setSteps] = useState<Partial<Record<AgentId, StepState>>>(run.steps)
+  const [final, setFinal] = useState<{ result: DeskResult; ms: number; tokens: number; cost: number | null } | null>(run.final)
   const [error, setError] = useState('')
   const [running, setRunning] = useState(false)
   const [now, setNow] = useState(0)
@@ -161,7 +173,7 @@ export default function ResaleWorkbench({ opportunities, locale = 'en' }: { oppo
       const res = await fetch('/api/resale-desk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, lang: locale }),
       })
       if (!res.ok || !res.body) throw new Error((await res.json().catch(() => ({}))).error ?? t.failed)
       const reader = res.body.getReader()
@@ -188,7 +200,7 @@ export default function ResaleWorkbench({ opportunities, locale = 'en' }: { oppo
     }
   }
 
-  const elapsed = recorded ? dealRun.final.ms / 1000 : ((running ? now : final ? started.current + final.ms : now) - started.current) / 1000
+  const elapsed = recorded ? run.final.ms / 1000 : ((running ? now : final ? started.current + final.ms : now) - started.current) / 1000
 
   return (
     <div className='grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'>
@@ -217,9 +229,11 @@ export default function ResaleWorkbench({ opportunities, locale = 'en' }: { oppo
                     <span className='truncate text-[13.5px] font-semibold'>{o.model}</span>
                     <span className='site-mono shrink-0 text-[13px] font-medium'>{mxn(o.price)}</span>
                   </span>
-                  <span className='mt-0.5 block truncate text-[12px]' style={{ color: 'var(--muted)' }}>
-                    “{o.title}”
-                  </span>
+                  {t.showTitles && (
+                    <span className='mt-0.5 block truncate text-[12px]' style={{ color: 'var(--muted)' }}>
+                      “{o.title}”
+                    </span>
+                  )}
                   <span className='site-mono mt-1 flex flex-wrap gap-x-3 text-[11px]' style={{ color: 'var(--muted)' }}>
                     {vs != null && (
                       <span style={{ color: vs > 0 ? 'var(--live)' : undefined }}>
@@ -241,7 +255,7 @@ export default function ResaleWorkbench({ opportunities, locale = 'en' }: { oppo
             onChange={(e) => setText(e.target.value)}
             rows={3}
             maxLength={1500}
-            placeholder={SAMPLE}
+            placeholder={sample}
             aria-label={t.listingText}
             className='mt-1.5 w-full resize-none rounded-[10px] px-3 py-2 text-[13px]'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', lineHeight: 1.5 }}
@@ -250,7 +264,7 @@ export default function ResaleWorkbench({ opportunities, locale = 'en' }: { oppo
             <button
               type='button'
               disabled={running}
-              onClick={() => evaluate({ text: text.trim() || SAMPLE }, 'text')}
+              onClick={() => evaluate({ text: text.trim() || sample }, 'text')}
               className='site-btn site-btn-accent site-cta h-10 flex-1 justify-center text-[14px] disabled:opacity-50'>
               {running && selected === 'text' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Sparkles className='h-4 w-4' />}
               {t.evaluate(!!text.trim(), recorded)}
@@ -342,7 +356,7 @@ function StepCard({ t, id, state }: { t: Dict; id: AgentId; state?: StepState })
           className='site-mono inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px]'
           style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>
           <KindIcon className='h-3 w-3' />
-          {meta.kind}
+          {t.kinds[meta.kind]}
         </span>
         <span className='site-mono ml-auto min-w-0 truncate text-[10.5px]' style={{ color: 'var(--muted)' }}>
           {state?.ms != null && `${(state.ms / 1000).toFixed(1)}s`}
@@ -406,7 +420,7 @@ function StepOutput({ t, id, o }: { t: Dict; id: AgentId; o: Record<string, unkn
       return (
         <>
           <p className='site-mono mt-1 text-[11.5px]'>
-            {t.resale} {n('expectedSale')} · {t.demand} {String(o.demand)}
+            {t.resale} {n('expectedSale')} · {t.demand} {t.levels[String(o.demand)] ?? String(o.demand)}
           </p>
           <Line>{String(o.summary)}</Line>
         </>

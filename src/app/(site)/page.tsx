@@ -21,10 +21,10 @@ import { getSiteLocale } from '@/lib/site/get-locale'
 // Home de empleo: la escalera (qué hace cada sistema, en lenguaje llano), la
 // demo real y "How it's built" para quien revisa decisiones y código.
 
-const DEMOS: Record<string, ReactNode> = {
-  answer: <CompanyAgentDemo />,
-  act: <LeadAgentDemo />,
-}
+// `key` por idioma: al cambiarlo, las demos se vuelven a montar con la corrida
+// grabada del idioma nuevo en vez de conservar la anterior.
+const demo = (id: string, locale: string): ReactNode =>
+  id === 'answer' ? <CompanyAgentDemo key={locale} /> : id === 'act' ? <LeadAgentDemo key={locale} /> : null
 
 type ContactLink = {
   href: string
@@ -206,7 +206,7 @@ export default async function HomePage() {
       <div id='projects' className='scroll-mt-14'>
         {copy.levels.map((lv, i) => (
           <LevelSection key={lv.id} copy={copy} level={lv} band={i % 2 === 0}>
-            {DEMOS[lv.id]}
+            {demo(lv.id, locale)}
           </LevelSection>
         ))}
       </div>

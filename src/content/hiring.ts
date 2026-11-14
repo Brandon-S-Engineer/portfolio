@@ -182,7 +182,7 @@ const en = {
     live: 'live',
     inProduction: 'in production',
   },
-  nav: { projects: 'Projects', production: 'In production', contact: 'Contact', menu: 'Toggle menu' },
+  nav: { projects: 'Projects', production: 'In production', contact: 'Contact', menu: 'Toggle menu', tag: 'full-stack · AI' },
   footer: { clients: 'For clients', solutions: 'Solutions', about: 'About', built: 'Built with Next.js' },
   section: {
     useWhen: 'Use this when',
@@ -301,11 +301,11 @@ const levelsEs: Level[] = [
       'Un cliente pregunta, el agente busca la respuesta en las políticas y la base de datos de la tienda, y contesta mostrando de dónde la sacó.',
     exampleInput: '“¿Tienen iPhone 13? ¿Lo puedo devolver?”',
     pipeline: [
-      ['Question', 'streamed chat', 'Dos preguntas en un mensaje.', 'Llega la pregunta'],
-      ['Agent loop', 'tool calling, max 5 steps', 'Aquí: la política de devoluciones y el stock.', 'El agente decide qué necesita'],
-      ['search_docs', 'policies in pgvector', 'Encuentra la política de 30 días.', 'Lee la política'],
+      ['Pregunta', 'chat en streaming', 'Dos preguntas en un mensaje.', 'Llega la pregunta'],
+      ['Loop del agente', 'tool calling, máx. 5 pasos', 'Aquí: la política de devoluciones y el stock.', 'El agente decide qué necesita'],
+      ['search_docs', 'políticas en pgvector', 'Encuentra la política de 30 días.', 'Lee la política'],
       ['find_products · get_order', 'Postgres', 'Encuentra iPhone 13 en stock.', 'Revisa el stock'],
-      ['Answer + trace', 'sources, SQL, cost', 'Responde y cita la política que usó.', 'Responde y muestra su trabajo'],
+      ['Respuesta + traza', 'fuentes, SQL, costo', 'Responde y cita la política que usó.', 'Responde y muestra su trabajo'],
     ],
     decisions: [
       {
@@ -328,9 +328,9 @@ const levelsEs: Level[] = [
       },
     ],
     failures: [
-      ['No encuentra nada parecido', 'Dice “no lo sé” en vez de adivinar.', 'similarity < 0.3'],
-      ['El modelo llama una tool con argumentos malos', 'El error regresa al modelo. No se cae.', 'zod validation'],
-      ['Alguien intenta abusar', 'Se detiene en 5 pasos por respuesta y 25 consultas por hora.', 'per-visitor rate limit'],
+      ['No encuentra nada parecido', 'Dice “no lo sé” en vez de adivinar.', 'similitud < 0.3'],
+      ['El modelo llama una tool con argumentos malos', 'El error regresa al modelo. No se cae.', 'validación con zod'],
+      ['Alguien intenta abusar', 'Se detiene en 5 pasos por respuesta y 25 consultas por hora.', 'límite por visitante'],
     ],
   },
   {
@@ -349,11 +349,11 @@ const levelsEs: Level[] = [
       'Escribe un lead, el agente lo califica, redacta la respuesta y prepara los cambios en el CRM, y se detiene hasta que una persona aprueba.',
     exampleInput: '“iPhone 15 Pro hoy, 16 mil pesos.”',
     pipeline: [
-      ['Qualify', 'intent, budget, score', 'Un comprador, score 85.', 'Evalúa al lead'],
-      ['Look up', 'CRM + inventory via MCP', 'Revisa el contacto y el stock que coincide.', 'Revisa lo que sabe la tienda'],
-      ['Draft + propose', 'reply and actions', 'Escribe la respuesta y los cambios al CRM.', 'Prepara todo'],
-      ['Approval', 'paused, state in Postgres', 'Se detiene aquí. Una persona lo revisa.', 'Espera a una persona'],
-      ['Execute', 'approved actions only', 'Ejecuta solo lo aprobado.', 'Hace solo lo aprobado'],
+      ['Calificar', 'intención, presupuesto, score', 'Un comprador, score 85.', 'Evalúa al lead'],
+      ['Consultar', 'CRM + inventario por MCP', 'Revisa el contacto y el stock que coincide.', 'Revisa lo que sabe la tienda'],
+      ['Redactar + proponer', 'respuesta y cambios', 'Escribe la respuesta y los cambios al CRM.', 'Prepara todo'],
+      ['Aprobación', 'en pausa, estado en Postgres', 'Se detiene aquí. Una persona lo revisa.', 'Espera a una persona'],
+      ['Ejecutar', 'solo cambios aprobados', 'Ejecuta solo lo aprobado.', 'Hace solo lo aprobado'],
     ],
     decisions: [
       {
@@ -376,9 +376,9 @@ const levelsEs: Level[] = [
       },
     ],
     failures: [
-      ['El agente propone una tool fuera de la lista', 'Se rechaza.', 'allow-list of 4 write tools'],
-      ['El servidor se reinicia a mitad de una aprobación', 'La corrida retoma donde se quedó.', 'Postgres checkpoint'],
-      ['El servicio está dormido (free tier)', 'La página lo dice en vez de esconderlo.', 'cold start shown'],
+      ['El agente propone una tool fuera de la lista', 'Se rechaza.', 'lista de 4 tools de escritura'],
+      ['El servidor se reinicia a mitad de una aprobación', 'La corrida retoma donde se quedó.', 'checkpoint en Postgres'],
+      ['El servicio está dormido (free tier)', 'La página lo dice en vez de esconderlo.', 'arranque en frío visible'],
     ],
   },
 ]
@@ -411,7 +411,7 @@ const es: HiringCopy = {
     live: 'en vivo',
     inProduction: 'en producción',
   },
-  nav: { projects: 'Proyectos', production: 'En producción', contact: 'Contacto', menu: 'Abrir menú' },
+  nav: { projects: 'Proyectos', production: 'En producción', contact: 'Contacto', menu: 'Abrir menú', tag: 'full-stack · IA' },
   footer: { clients: 'Para clientes', solutions: 'Soluciones', about: 'Sobre mí', built: 'Hecho con Next.js' },
   section: {
     useWhen: 'Sirve cuando',
@@ -443,11 +443,11 @@ const es: HiringCopy = {
       'Navego anuncios, el sistema registra cada precio, el código calcula cuánto vale de verdad un equipo y los agentes juzgan si la compra es segura.',
     exampleInput: '“iPhone 13 128GB, $6,500.”',
     pipeline: [
-      ['Chrome extension', 'captures listings', 'Ve el anuncio mientras navego.', 'Ve el anuncio'],
-      ['Ingest API', 'validated, deduped', 'Lo guarda una vez, con su precio.', 'Lo guarda una vez'],
-      ['Price model', 'deterministic code + SQL', 'Calcula el precio de mercado y el máximo a pagar.', 'El código hace las cuentas'],
-      ['Postgres', 'listings, price history', 'Lo guarda con su historial de precios.', 'Recuerda cada precio'],
-      ['Agents', 'judgment only', 'Veredicto: negociar. Oferta escrita.', 'Los agentes dan un veredicto'],
+      ['Extensión de Chrome', 'captura anuncios', 'Ve el anuncio mientras navego.', 'Ve el anuncio'],
+      ['API de ingesta', 'validados, sin duplicados', 'Lo guarda una vez, con su precio.', 'Lo guarda una vez'],
+      ['Modelo de precios', 'código determinista + SQL', 'Calcula el precio de mercado y el máximo a pagar.', 'El código hace las cuentas'],
+      ['Postgres', 'anuncios, historial de precios', 'Lo guarda con su historial de precios.', 'Recuerda cada precio'],
+      ['Agentes', 'solo criterio', 'Veredicto: negociar. Oferta escrita.', 'Los agentes dan un veredicto'],
     ],
     decisions: [
       {
@@ -469,6 +469,7 @@ const es: HiringCopy = {
         tradeoff: 'los números pueden tener 30 minutos de antigüedad.',
       },
     ],
+    stack: ['Extensión de Chrome', 'Next.js', 'Postgres', 'Multiagente', 'zod'],
     next: 'Siguiente: compras entre países.',
     fullPage: 'Página completa',
   },

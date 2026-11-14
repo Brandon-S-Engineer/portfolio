@@ -53,7 +53,7 @@ export default function SiteNav() {
           <span
             className='site-mono hidden text-[11.5px] sm:inline'
             style={{ color: 'var(--muted)' }}>
-            full-stack&nbsp;·&nbsp;AI
+            {copy.nav.tag}
           </span>
         </Link>
 

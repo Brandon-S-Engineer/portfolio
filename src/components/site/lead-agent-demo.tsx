@@ -15,12 +15,12 @@ import { useLocale } from '@/components/site/locale-context'
 const API = process.env.NEXT_PUBLIC_LEAD_AGENT_URL || site.leadAgentUrl
 
 const NODES = [
-  { id: 'qualify', label: 'Qualify', hint: 'LLM · structured output' },
-  { id: 'lookup', label: 'Look up', hint: 'MCP · find_contact, search_inventory' },
-  { id: 'draft_reply', label: 'Draft reply', hint: 'LLM · streamed' },
-  { id: 'propose_actions', label: 'Propose CRM actions', hint: 'LLM · MCP tool schemas' },
-  { id: 'approval', label: 'Human approval', hint: 'LangGraph interrupt · Postgres checkpoint' },
-  { id: 'execute', label: 'Execute', hint: 'MCP · write tools' },
+  { id: 'qualify' },
+  { id: 'lookup' },
+  { id: 'draft_reply' },
+  { id: 'propose_actions' },
+  { id: 'approval' },
+  { id: 'execute' },
 ] as const
 
 // Lo que hace cada nodo mientras el LLM o MCP trabajan; rota para que el
@@ -34,6 +34,14 @@ const T = {
       propose_actions: 'Propose CRM actions',
       approval: 'Human approval',
       execute: 'Execute',
+    } as Record<string, string>,
+    hints: {
+      qualify: 'LLM · structured output',
+      lookup: 'MCP · find_contact, search_inventory',
+      draft_reply: 'LLM · streamed',
+      propose_actions: 'LLM · MCP tool schemas',
+      approval: 'LangGraph interrupt · Postgres checkpoint',
+      execute: 'MCP · write tools',
     } as Record<string, string>,
     thinking: {
       qualify: ['Reading the message…', 'Detecting intent and language…', 'Scoring the lead 0–100…', 'Estimating budget and urgency…'],
@@ -75,6 +83,8 @@ const T = {
     ),
     streaming: 'Streaming tokens…',
     qual: { intent: 'intent', score: 'score', urgency: 'urgency' },
+    intents: { buy: 'buy', trade_in: 'trade-in', support: 'support', spam: 'spam', other: 'other' } as Record<string, string>,
+    urgencies: { now: 'now', this_month: 'this month', browsing: 'browsing' } as Record<string, string>,
     drafted: 'Drafted reply',
     proposed: 'Proposed CRM actions',
     waiting: '· waiting for approval',
@@ -97,6 +107,14 @@ const T = {
       propose_actions: 'Proponer cambios al CRM',
       approval: 'Aprobación humana',
       execute: 'Ejecutar',
+    } as Record<string, string>,
+    hints: {
+      qualify: 'LLM · salida estructurada',
+      lookup: 'MCP · find_contact, search_inventory',
+      draft_reply: 'LLM · en streaming',
+      propose_actions: 'LLM · esquemas de tools MCP',
+      approval: 'interrupt de LangGraph · checkpoint en Postgres',
+      execute: 'MCP · tools de escritura',
     } as Record<string, string>,
     thinking: {
       qualify: ['Leyendo el mensaje…', 'Detectando intención e idioma…', 'Calificando el lead de 0 a 100…', 'Estimando presupuesto y urgencia…'],
@@ -138,6 +156,8 @@ const T = {
     ),
     streaming: 'Recibiendo tokens…',
     qual: { intent: 'intención', score: 'score', urgency: 'urgencia' },
+    intents: { buy: 'comprar', trade_in: 'a cuenta', support: 'soporte', spam: 'spam', other: 'otro' } as Record<string, string>,
+    urgencies: { now: 'ya', this_month: 'este mes', browsing: 'solo mira' } as Record<string, string>,
     drafted: 'Respuesta redactada',
     proposed: 'Cambios propuestos al CRM',
     waiting: '· esperando aprobación',
@@ -162,33 +182,47 @@ const RECORDED_DONE = ['qualify', 'lookup', 'draft_reply', 'propose_actions']
 const HEALTH_TRIES = 3
 const HEALTH_WAIT_MS = 5000
 
-const PRESETS = [
-  {
-    id: 'hot',
-    name: 'Carlos',
-    contact: 'carlos@example.com',
-    message: 'Hola! busco un iPhone 15 Pro, tengo como 19 mil y lo necesito esta semana. ¿Aceptan mi iPhone 12 a cuenta?',
-  },
-  { id: 'spam', name: '', contact: '+52 55 9999 0000', message: 'CLICK HERE to win FREE bitcoin!!! www.win-btc.xyz' },
-]
+const PRESETS = {
+  en: [
+    {
+      id: 'hot',
+      name: 'Carlos',
+      contact: 'carlos@example.com',
+      message: "Hi! I'm looking for an iPhone 15 Pro, I have about 19k pesos and need it this week. Do you take my iPhone 12 as a trade-in?",
+    },
+    { id: 'spam', name: '', contact: '+52 55 9999 0000', message: 'CLICK HERE to win FREE bitcoin!!! www.win-btc.xyz' },
+  ],
+  es: [
+    {
+      id: 'hot',
+      name: 'Carlos',
+      contact: 'carlos@example.com',
+      message: 'Hola! busco un iPhone 15 Pro, tengo como 19 mil y lo necesito esta semana. ¿Aceptan mi iPhone 12 a cuenta?',
+    },
+    { id: 'spam', name: '', contact: '+52 55 9999 0000', message: '¡¡GANA bitcoin GRATIS!!! Da clic AQUÍ www.win-btc.xyz' },
+  ],
+}
 
 export type Action = { tool: string; args: Record<string, unknown>; why: string }
 export type Qualification = { intent: string; score: number; urgency: string; budget_mxn: number | null; summary: string }
 type Contact = { id: number; contact_key: string; name: string | null; interest: string | null; score: number | null; stage: string }
 
 export default function LeadAgentDemo() {
-  const t = T[useLocale()]
+  const locale = useLocale()
+  const t = T[locale]
+  const rec = leadRun[locale]
+  const presets = PRESETS[locale]
   const [awake, setAwake] = useState<'waking' | 'up' | 'down'>('waking')
-  const [form, setForm] = useState(PRESETS[0])
+  const [form, setForm] = useState(presets[0])
   // Mientras `recorded` sea true, lo que se ve es la corrida guardada del
   // primer preset, detenida en la aprobación humana.
   const [recorded, setRecorded] = useState(true)
   const [done, setDone] = useState<string[]>(RECORDED_DONE)
   const [active, setActive] = useState<string | null>('approval')
-  const [qual, setQual] = useState<Qualification | null>(leadRun.qualification)
-  const [reply, setReply] = useState(leadRun.reply)
-  const [actions, setActions] = useState<Action[]>(leadRun.actions)
-  const [selected, setSelected] = useState<boolean[]>(leadRun.actions.map(() => true))
+  const [qual, setQual] = useState<Qualification | null>(rec.qualification)
+  const [reply, setReply] = useState(rec.reply)
+  const [actions, setActions] = useState<Action[]>(rec.actions)
+  const [selected, setSelected] = useState<boolean[]>(rec.actions.map(() => true))
   const [threadId, setThreadId] = useState<string | null>(null)
   const [phase, setPhase] = useState<'idle' | 'running' | 'approval' | 'executing' | 'finished'>('idle')
   const [results, setResults] = useState<{ tool: string; result: unknown }[]>([])
@@ -196,7 +230,7 @@ export default function LeadAgentDemo() {
   const [error, setError] = useState('')
   const [model, setModel] = useState('')
   // Tiempos por nodo para que se vea dónde se va la latencia.
-  const [times, setTimes] = useState<Record<string, number>>(leadRun.times)
+  const [times, setTimes] = useState<Record<string, number>>(rec.times)
   const [now, setNow] = useState(0)
   const stepStart = useRef(0)
   const runStart = useRef(0)
@@ -359,7 +393,7 @@ export default function LeadAgentDemo() {
             </p>
           )}
           <div className='mt-3 flex flex-wrap gap-2'>
-            {PRESETS.map((p) => (
+            {presets.map((p) => (
               <button
                 key={p.id}
                 type='button'
@@ -435,7 +469,7 @@ export default function LeadAgentDemo() {
                     {t.nodes[n.id]}
                   </span>
                   <span className='site-mono truncate text-[11px]' style={{ color: 'var(--muted)' }}>
-                    {n.hint}
+                    {t.hints[n.id]}
                   </span>
                   {times[n.id] != null && (
                     <span className='site-mono ml-auto shrink-0 text-[11px]' style={{ color: 'var(--muted)' }}>
@@ -462,7 +496,7 @@ export default function LeadAgentDemo() {
           )}
           {recorded && (
             <p className='site-mono mb-3 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold' style={{ background: 'var(--card)', color: 'var(--muted)' }}>
-              {t.recorded} · {leadRun.model}
+              {t.recorded} · {rec.model}
             </p>
           )}
           {(recorded || phase === 'approval') && (
@@ -506,9 +540,9 @@ export default function LeadAgentDemo() {
           {qual && (
             <div className='site-mono grid grid-cols-3 gap-2 text-center text-[11.5px]'>
               {[
-                [t.qual.intent, qual.intent],
+                [t.qual.intent, t.intents[qual.intent] ?? qual.intent],
                 [t.qual.score, `${qual.score}/100`],
-                [t.qual.urgency, qual.urgency.replace(/_/g, ' ')],
+                [t.qual.urgency, t.urgencies[qual.urgency] ?? qual.urgency.replace(/_/g, ' ')],
               ].map(([k, v]) => (
                 <div key={k} className='rounded-[10px] p-2' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                   <div style={{ color: 'var(--muted)' }}>{k}</div>

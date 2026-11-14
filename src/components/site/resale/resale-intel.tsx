@@ -138,7 +138,7 @@ export default function ResaleIntel({
       )}
 
       <MarketRanges bands={snapshot.bands} locale={locale} />
-      <ResaleWorkbench opportunities={snapshot.opportunities} locale={locale} />
+      <ResaleWorkbench key={locale} opportunities={snapshot.opportunities} locale={locale} />
     </div>
   )
 }

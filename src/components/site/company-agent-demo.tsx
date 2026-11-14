@@ -53,6 +53,8 @@ const T = {
     latency: 'latency',
     tokens: 'tokens',
     cost: 'cost',
+    modelLabel: 'model',
+    models: { 'gpt-5-nano': 'cheapest', 'gpt-5-mini': 'smarter', 'gpt-4.1-mini': 'fastest' } as Record<string, string>,
   },
   es: {
     questions: ['¿Qué modelos de iPhone 15 tienen en stock por menos de $15,000 MXN?', '¿La garantía cubre una pantalla estrellada?'],
@@ -91,15 +93,13 @@ const T = {
     latency: 'latencia',
     tokens: 'tokens',
     cost: 'costo',
+    modelLabel: 'modelo',
+    models: { 'gpt-5-nano': 'más barato', 'gpt-5-mini': 'más listo', 'gpt-4.1-mini': 'más rápido' } as Record<string, string>,
   },
 }
 
 // Debe coincidir con MODELS en lib/agent-demo/openai.ts (solo modelos baratos).
-const MODEL_OPTIONS = [
-  { id: 'gpt-5-nano', label: 'gpt-5-nano · cheapest' },
-  { id: 'gpt-5-mini', label: 'gpt-5-mini · smarter' },
-  { id: 'gpt-4.1-mini', label: 'gpt-4.1-mini · fastest' },
-]
+const MODEL_OPTIONS = ['gpt-5-nano', 'gpt-5-mini', 'gpt-4.1-mini'] as const
 
 export type Msg = { role: 'user' | 'assistant'; content: string }
 type Source = { id: string; title: string; heading: string; score: number }
@@ -114,11 +114,13 @@ export type TraceEvent =
 const toolIcon = { search_docs: FileSearch, find_products: Database, get_order: Database } as Record<string, typeof Database>
 
 export default function CompanyAgentDemo() {
-  const t = T[useLocale()]
+  const locale = useLocale()
+  const t = T[locale]
+  const run = answerRun[locale]
   // Mientras `recorded` sea true, lo que se ve es la corrida guardada.
   const [recorded, setRecorded] = useState(true)
-  const [messages, setMessages] = useState<Msg[]>(answerRun.messages)
-  const [trace, setTrace] = useState<TraceEvent[]>(answerRun.trace)
+  const [messages, setMessages] = useState<Msg[]>(run.messages)
+  const [trace, setTrace] = useState<TraceEvent[]>(run.trace)
   const [input, setInput] = useState(t.questions[0])
   const [busy, setBusy] = useState(false)
   const [model, setModel] = useState('gpt-4.1-mini')
@@ -141,7 +143,7 @@ export default function CompanyAgentDemo() {
       const res = await fetch('/api/agent-demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: next.slice(-12) }),
+        body: JSON.stringify({ model, messages: next.slice(-12), lang: locale }),
       })
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: 'Request failed' }))
@@ -211,8 +213,8 @@ export default function CompanyAgentDemo() {
               disabled={busy}
               onClick={() => {
                 setRecorded(true)
-                setMessages(answerRun.messages)
-                setTrace(answerRun.trace)
+                setMessages(run.messages)
+                setTrace(run.trace)
                 setInput(t.questions[0])
               }}
               className='inline-flex items-center gap-1 text-[12.5px]'
@@ -297,8 +299,8 @@ export default function CompanyAgentDemo() {
             className='site-mono h-11 w-full rounded-[12px] px-2.5 text-[12.5px] outline-none focus-visible:ring-2 sm:w-auto'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
             {MODEL_OPTIONS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
+              <option key={m} value={m}>
+                {m} · {t.models[m]}
               </option>
             ))}
           </select>
@@ -352,7 +354,7 @@ export default function CompanyAgentDemo() {
           )}
           {!showPrompt && answer && (
             <p className='site-mono text-[11.5px]' style={{ color: 'var(--muted)' }}>
-              model: {answer.model}
+              {t.modelLabel}: {answer.model}
             </p>
           )}
           {!showPrompt && trace.map((ev, i) => {
