@@ -159,9 +159,9 @@
     if (!bar) {
       bar = document.createElement('div')
       bar.className = 'vac-bar'
-      bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 6px 0;font:600 11px/1.5 system-ui,sans-serif'
-      // Los clics en la barra no deben abrir la vacante.
-      bar.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault() })
+      // Por encima del enlace "estirado" de Indeed, que cubre toda la tarjeta.
+      bar.style.cssText = 'position:relative;z-index:2147483000;pointer-events:auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 6px 0;font:600 11px/1.5 system-ui,sans-serif'
+      bar.dataset.jk = jk
       card.prepend(bar)
     }
     const read = v.verdict === 'APLICAR' || v.verdict === 'ESTIRAR'
@@ -172,9 +172,27 @@
     bar.innerHTML = `<span class="vac-badge" style="padding:2px 8px;border-radius:999px;color:#fff;background:${color}">${label}</span>
       <button data-act="apply" style="${btn}">${applied ? 'Deshacer' : 'Ya apliqué'}</button>
       ${company ? `<button data-act="mute" style="${btn}">${v.tag === 'SILENCIADA' ? 'Reactivar empresa' : 'Silenciar empresa'}</button>` : ''}`
-    bar.querySelector('[data-act="apply"]').onclick = () => action({ externalId: `indeed_${jk}`, estado: applied ? 'NUEVA' : 'APLICADA' })
-    const muteBtn = bar.querySelector('[data-act="mute"]')
-    if (muteBtn) muteBtn.onclick = () => action({ company, mute: v.tag !== 'SILENCIADA' })
+  }
+
+  // Los clics en la barra NO deben abrir la vacante. Indeed escucha en la
+  // tarjeta entera, así que se interceptan aquí, en la ventana y en fase de
+  // captura (antes que cualquier listener de la página), y ahí mismo se
+  // ejecuta el botón.
+  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'auxclick']) {
+    window.addEventListener(type, (e) => {
+      const bar = e.target instanceof Element ? e.target.closest('.vac-bar') : null
+      if (!bar) return
+      e.stopImmediatePropagation()
+      e.preventDefault()
+      if (type !== 'click') return
+      const act = e.target.closest('[data-act]')?.dataset.act
+      const jk = bar.dataset.jk
+      const v = verdicts.get(jk)
+      if (!act || !v) return
+      if (act === 'apply') action({ externalId: `indeed_${jk}`, estado: v.estado === 'APLICADA' ? 'NUEVA' : 'APLICADA' })
+      const company = readCard(bar.closest(SEL.card))?.posting.company
+      if (act === 'mute' && company) action({ company, mute: v.tag !== 'SILENCIADA' })
+    }, true)
   }
 
   // Marcar "ya apliqué" o silenciar una empresa: el CRM responde todas las
