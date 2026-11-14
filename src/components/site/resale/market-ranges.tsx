@@ -6,10 +6,33 @@
 
 import { useState } from 'react'
 import { CATEGORY_LABEL, MARKET_CATEGORIES, type MarketCategory, type ModelBand } from '@/lib/resale/types'
+import type { Locale } from '@/lib/site/locale'
 
 const mxn = (n: number) => `$${n.toLocaleString('en-US')}`
 
-export default function MarketRanges({ bands }: { bands: Record<MarketCategory, ModelBand[]> }) {
+const T = {
+  en: {
+    title: 'What used Apple devices really sell for in Mexico City',
+    legend: 'Bar = middle 50% of asking prices (P25–P75) · tick = median · MXN',
+    median: 'median',
+    listings: 'listings',
+    sold: 'sold',
+    sellsIn: (d: number) => `sells in ~${d} d`,
+    audio: 'AirPods & audio',
+  },
+  es: {
+    title: 'En cuánto se venden de verdad los Apple usados en CDMX',
+    legend: 'Barra = 50% central de los precios pedidos (P25–P75) · marca = mediana · MXN',
+    median: 'mediana',
+    listings: 'anuncios',
+    sold: 'vendidos',
+    sellsIn: (d: number) => `se vende en ~${d} d`,
+    audio: 'AirPods y audio',
+  },
+}
+
+export default function MarketRanges({ bands, locale = 'en' }: { bands: Record<MarketCategory, ModelBand[]>; locale?: Locale }) {
+  const t = T[locale]
   const cats = MARKET_CATEGORIES.filter((c) => bands[c].length)
   const [cat, setCat] = useState<MarketCategory>(cats[0] ?? 'IPHONE')
   const [hover, setHover] = useState(0)
@@ -24,9 +47,9 @@ export default function MarketRanges({ bands }: { bands: Record<MarketCategory, 
     <div className='rounded-[16px] p-4 sm:p-5' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       <div className='flex flex-wrap items-end justify-between gap-3'>
         <div>
-          <p className='site-kicker'>What used Apple devices really sell for in Mexico City</p>
+          <p className='site-kicker'>{t.title}</p>
           <p className='mt-1 text-[13px]' style={{ color: 'var(--muted)' }}>
-            Bar = middle 50% of asking prices (P25–P75) · tick = median · MXN
+            {t.legend}
           </p>
         </div>
         <div className='flex flex-wrap gap-1.5' role='tablist'>
@@ -46,7 +69,7 @@ export default function MarketRanges({ bands }: { bands: Record<MarketCategory, 
                 background: c === cat ? 'var(--accent-soft)' : 'transparent',
                 color: c === cat ? 'var(--accent)' : 'var(--muted)',
               }}>
-              {CATEGORY_LABEL[c]}
+              {c === 'AUDIO' ? t.audio : CATEGORY_LABEL[c]}
             </button>
           ))}
         </div>
@@ -88,11 +111,11 @@ export default function MarketRanges({ bands }: { bands: Record<MarketCategory, 
         aria-live='polite'>
         <span style={{ color: 'var(--fg)' }}>{active.label}</span>
         <span>P25 {mxn(active.p25)}</span>
-        <span>median {mxn(active.p50)}</span>
+        <span>{t.median} {mxn(active.p50)}</span>
         <span>P75 {mxn(active.p75)}</span>
-        <span>{active.n.toLocaleString('en-US')} listings</span>
-        <span>{active.gone.toLocaleString('en-US')} sold</span>
-        {active.medianDays != null && <span>sells in ~{active.medianDays} d</span>}
+        <span>{active.n.toLocaleString('en-US')} {t.listings}</span>
+        <span>{active.gone.toLocaleString('en-US')} {t.sold}</span>
+        {active.medianDays != null && <span>{t.sellsIn(active.medianDays)}</span>}
       </div>
     </div>
   )

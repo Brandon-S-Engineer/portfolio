@@ -782,17 +782,6 @@ html:not(.dark) .site-day {
   }
 }
 
-/* Botón de "How it's built": azul suave y sin brillo, para no competir con la
-   acción de la demo, que es la que debe llamar. */
-.site-built-btn {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: color-mix(in oklch, var(--accent) 45%, transparent);
-}
-.site-built:not([open]) summary:hover .site-built-btn {
-  background: color-mix(in oklch, var(--accent) 18%, transparent);
-}
-
 /* "How it's built" cerrado: tarjeta con borde de acento y botón que brilla.
    Abierto, se calma. */
 .site-built {

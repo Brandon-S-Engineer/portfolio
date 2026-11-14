@@ -10,17 +10,111 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Circle, Clipboard, Code2, Database, Loader2, ShieldAlert, Sparkles } from 'lucide-react'
 import type { AgentId, DeskEvent, DeskResult, Opportunity } from '@/lib/resale/types'
 import { dealRun } from '@/content/recorded-runs'
+import type { Locale } from '@/lib/site/locale'
 
 const mxn = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
-const STEPS: Record<AgentId, { label: string; kind: 'code' | 'SQL' | 'LLM'; hint: string; thinking: string }> = {
-  parse: { label: 'Parse listing', kind: 'code', hint: 'deterministic parser', thinking: 'Detecting model, storage and flags…' },
-  spec: { label: 'Spec analyst', kind: 'LLM', hint: 'only when the parser is unsure', thinking: 'Reading the text for storage and condition…' },
-  comps: { label: 'Market comps', kind: 'SQL', hint: 'real comparable listings', thinking: 'Querying comparable listings…' },
-  market: { label: 'Market analyst', kind: 'LLM', hint: 'resale price & speed', thinking: 'Estimating resale price and days to sell…' },
-  risk: { label: 'Risk analyst', kind: 'LLM', hint: 'scams, locks, damage', thinking: 'Looking for scam and condition red flags…' },
-  lead: { label: 'Deal lead', kind: 'LLM', hint: 'verdict + offer message', thinking: 'Weighing everything and writing the offer…' },
+type StepMeta = { label: string; kind: 'code' | 'SQL' | 'LLM'; hint: string; thinking: string }
+
+const T = {
+  en: {
+    steps: {
+      parse: { label: 'Parse listing', kind: 'code', hint: 'deterministic parser', thinking: 'Detecting model, storage and flags…' },
+      spec: { label: 'Spec analyst', kind: 'LLM', hint: 'only when the parser is unsure', thinking: 'Reading the text for storage and condition…' },
+      comps: { label: 'Market comps', kind: 'SQL', hint: 'real comparable listings', thinking: 'Querying comparable listings…' },
+      market: { label: 'Market analyst', kind: 'LLM', hint: 'resale price & speed', thinking: 'Estimating resale price and days to sell…' },
+      risk: { label: 'Risk analyst', kind: 'LLM', hint: 'scams, locks, damage', thinking: 'Looking for scam and condition red flags…' },
+      lead: { label: 'Deal lead', kind: 'LLM', hint: 'verdict + offer message', thinking: 'Weighing everything and writing the offer…' },
+    } as Record<AgentId, StepMeta>,
+    deals: 'Today’s flagged deals · real listings',
+    dealsSub: 'Scored by the CRM against the market. Pick one and let the agents decide, live.',
+    vsMedian: (vs: number) => (vs > 0 ? `${vs}% under median` : `${-vs}% over median`),
+    paste: 'Or paste any listing',
+    listingText: 'Listing text',
+    evaluate: (custom: boolean, live: boolean) => `Evaluate ${custom ? 'listing' : 'the sample'}${live ? ' live' : ''}`,
+    desk: 'Deal desk · multi-agent',
+    recorded: 'recorded run · real output · ',
+    intro: (
+      <>
+        Six steps, two kinds of work. <b>Code and SQL</b> produce every number: the parse, the comparable sales, the margin target
+        and the max price. <b>LLM agents</b> only judge what code can’t — ambiguous text, scam signals, and how to word the offer —
+        and their output is schema-validated and clamped to the numbers.
+      </>
+    ),
+    howGot: 'How it got there',
+    parallel: 'running in parallel',
+    skipped: 'Skipped',
+    storage: 'storage',
+    asking: 'asking',
+    confidence: 'confidence',
+    storageArrow: 'Storage',
+    notStated: 'not stated (kept unknown, no guessing)',
+    comps: 'comps',
+    median: 'median',
+    sold: 'sold',
+    soldIn: (d: number) => ` in ~${d} d`,
+    ceiling: 'price ceiling',
+    resale: 'resale',
+    demand: 'demand',
+    risk: (level: string) => `${level} risk`,
+    haircut: 'haircut',
+    stats: { asking: 'Asking', maxBuy: 'Max buy', resale: 'Resale', margin: 'Margin', sellsIn: 'Sells in' },
+    verdict: { BUY: 'BUY', NEGOTIATE: 'NEGOTIATE', PASS: 'PASS' } as Record<string, string>,
+    message: 'Message to the seller (Spanish)',
+    copy: 'Copy message',
+    footer: 'numbers by code, judgment by LLM',
+    failed: 'Request failed',
+  },
+  es: {
+    steps: {
+      parse: { label: 'Leer el anuncio', kind: 'code', hint: 'parser determinista', thinking: 'Detectando modelo, capacidad y señales…' },
+      spec: { label: 'Analista de specs', kind: 'LLM', hint: 'solo si el parser duda', thinking: 'Leyendo el texto para capacidad y estado…' },
+      comps: { label: 'Comparables', kind: 'SQL', hint: 'anuncios reales parecidos', thinking: 'Buscando anuncios comparables…' },
+      market: { label: 'Analista de mercado', kind: 'LLM', hint: 'precio y velocidad de reventa', thinking: 'Estimando precio de reventa y días para vender…' },
+      risk: { label: 'Analista de riesgo', kind: 'LLM', hint: 'estafas, bloqueos, daños', thinking: 'Buscando señales de estafa y de mal estado…' },
+      lead: { label: 'Decisión final', kind: 'LLM', hint: 'veredicto + mensaje de oferta', thinking: 'Sopesando todo y escribiendo la oferta…' },
+    } as Record<AgentId, StepMeta>,
+    deals: 'Ofertas marcadas hoy · anuncios reales',
+    dealsSub: 'El CRM las calificó contra el mercado. Elige una y deja que los agentes decidan, en vivo.',
+    vsMedian: (vs: number) => (vs > 0 ? `${vs}% bajo la mediana` : `${-vs}% sobre la mediana`),
+    paste: 'O pega cualquier anuncio',
+    listingText: 'Texto del anuncio',
+    evaluate: (custom: boolean, live: boolean) => `Evaluar ${custom ? 'el anuncio' : 'el ejemplo'}${live ? ' en vivo' : ''}`,
+    desk: 'Mesa de decisión · multiagente',
+    recorded: 'corrida grabada · salida real · ',
+    intro: (
+      <>
+        Seis pasos, dos tipos de trabajo. <b>El código y SQL</b> sacan cada número: la lectura del anuncio, las ventas comparables,
+        el margen objetivo y el precio máximo. <b>Los agentes LLM</b> solo juzgan lo que el código no puede (texto ambiguo, señales de
+        estafa y cómo redactar la oferta), y su salida se valida con un esquema y se ajusta a los números.
+      </>
+    ),
+    howGot: 'Cómo llegó ahí',
+    parallel: 'en paralelo',
+    skipped: 'Omitido',
+    storage: 'capacidad',
+    asking: 'pide',
+    confidence: 'confianza',
+    storageArrow: 'Capacidad',
+    notStated: 'no se dice (queda desconocida, sin adivinar)',
+    comps: 'comparables',
+    median: 'mediana',
+    sold: 'vendidos',
+    soldIn: (d: number) => ` en ~${d} d`,
+    ceiling: 'precio tope',
+    resale: 'reventa',
+    demand: 'demanda',
+    risk: (level: string) => `riesgo ${({ low: 'bajo', medium: 'medio', high: 'alto' } as Record<string, string>)[level] ?? level}`,
+    haircut: 'descuento',
+    stats: { asking: 'Pide', maxBuy: 'Máx. compra', resale: 'Reventa', margin: 'Margen', sellsIn: 'Se vende en' },
+    verdict: { BUY: 'COMPRAR', NEGOTIATE: 'NEGOCIAR', PASS: 'PASAR' } as Record<string, string>,
+    message: 'Mensaje al vendedor',
+    copy: 'Copiar mensaje',
+    footer: 'números por código, criterio por LLM',
+    failed: 'La solicitud falló',
+  },
 }
+type Dict = (typeof T)['en']
 
 export type StepState = { status: 'start' | 'done' | 'skipped'; ms?: number; tokens?: number; output?: Record<string, unknown>; note?: string }
 
@@ -31,7 +125,8 @@ const MAX_DEALS = 2
 
 const SAMPLE = 'iPhone 16 Pro Max 256 $6,000 solo hoy, te lo envío por paquetería, pago por adelantado'
 
-export default function ResaleWorkbench({ opportunities }: { opportunities: Opportunity[] }) {
+export default function ResaleWorkbench({ opportunities, locale = 'en' }: { opportunities: Opportunity[]; locale?: Locale }) {
+  const t = T[locale]
   const [selected, setSelected] = useState<string | null>(null)
   const [text, setText] = useState('')
   // Mientras `recorded` sea true, el panel muestra la corrida guardada.
@@ -68,7 +163,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       })
-      if (!res.ok || !res.body) throw new Error((await res.json().catch(() => ({}))).error ?? 'Request failed')
+      if (!res.ok || !res.body) throw new Error((await res.json().catch(() => ({}))).error ?? t.failed)
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buf = ''
@@ -99,9 +194,9 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
     <div className='grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'>
       {/* OPPORTUNITIES */}
       <div className='min-w-0 rounded-[16px] p-4' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-        <p className='site-kicker'>Today&apos;s flagged deals · real listings</p>
+        <p className='site-kicker'>{t.deals}</p>
         <p className='mt-1 text-[13px]' style={{ color: 'var(--muted)' }}>
-          Scored by the CRM against the market. Pick one and let the agents decide, live.
+          {t.dealsSub}
         </p>
         <ul className='mt-3 space-y-1.5'>
           {opportunities.slice(0, MAX_DEALS).map((o) => {
@@ -128,7 +223,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
                   <span className='site-mono mt-1 flex flex-wrap gap-x-3 text-[11px]' style={{ color: 'var(--muted)' }}>
                     {vs != null && (
                       <span style={{ color: vs > 0 ? 'var(--live)' : undefined }}>
-                        {vs > 0 ? `${vs}% under` : `${-vs}% over`} median
+                        {t.vsMedian(vs)}
                       </span>
                     )}
                     <span>score {o.score}</span>
@@ -140,14 +235,14 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
           })}
         </ul>
         <div className='mt-4'>
-          <p className='site-kicker'>Or paste any listing</p>
+          <p className='site-kicker'>{t.paste}</p>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={3}
             maxLength={1500}
             placeholder={SAMPLE}
-            aria-label='Listing text'
+            aria-label={t.listingText}
             className='mt-1.5 w-full resize-none rounded-[10px] px-3 py-2 text-[13px]'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', lineHeight: 1.5 }}
           />
@@ -158,8 +253,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
               onClick={() => evaluate({ text: text.trim() || SAMPLE }, 'text')}
               className='site-btn site-btn-accent site-cta h-10 flex-1 justify-center text-[14px] disabled:opacity-50'>
               {running && selected === 'text' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Sparkles className='h-4 w-4' />}
-              Evaluate {text.trim() ? 'listing' : 'the sample'}
-              {recorded && ' live'}
+              {t.evaluate(!!text.trim(), recorded)}
             </button>
           </div>
         </div>
@@ -168,12 +262,12 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
       {/* DEAL DESK */}
       <div ref={panel} className='min-w-0 scroll-mt-4 rounded-[16px] p-4' style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
         <div className='flex items-center justify-between gap-2'>
-          <p className='site-kicker'>Deal desk · multi-agent</p>
+          <p className='site-kicker'>{t.desk}</p>
           {(running || final) && (
             <span
               className={`site-mono text-[11.5px] ${recorded ? 'rounded-full px-2 py-0.5 text-[11px] font-bold' : ''}`}
               style={{ color: 'var(--muted)', background: recorded ? 'var(--card)' : undefined }}>
-              {recorded && 'recorded run · real output · '}
+              {recorded && t.recorded}
               {elapsed.toFixed(1)}s
             </span>
           )}
@@ -181,9 +275,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
 
         {!running && !final && !error && (
           <p className='mt-3 text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-            Six steps, two kinds of work. <b>Code and SQL</b> produce every number: the parse, the comparable sales, the
-            margin target and the max price. <b>LLM agents</b> only judge what code can&apos;t — ambiguous text, scam
-            signals, and how to word the offer — and their output is schema-validated and clamped to the numbers.
+            {t.intro}
           </p>
         )}
         {error && (
@@ -196,6 +288,7 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
         {final && (
           <>
             <Verdict
+              t={t}
               f={final}
               listing={recorded ? final.result.title : undefined}
               copied={copied}
@@ -204,25 +297,25 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
               }}
             />
             <p className='site-kicker mt-4' style={{ color: 'var(--muted)' }}>
-              How it got there
+              {t.howGot}
             </p>
           </>
         )}
 
         <div className='mt-3 space-y-2'>
           {(['parse', 'spec', 'comps'] as AgentId[]).map((id) => (
-            <StepCard key={id} id={id} state={steps[id]} />
+            <StepCard key={id} t={t} id={id} state={steps[id]} />
           ))}
           <div className='site-mono flex items-center gap-2 pt-1 text-[10.5px] uppercase' style={{ color: 'var(--muted)' }}>
             <span className='h-px flex-1' style={{ background: 'var(--border)' }} />
-            running in parallel
+            {t.parallel}
             <span className='h-px flex-1' style={{ background: 'var(--border)' }} />
           </div>
           <div className='grid gap-2 sm:grid-cols-2'>
-            <StepCard id='market' state={steps.market} />
-            <StepCard id='risk' state={steps.risk} />
+            <StepCard t={t} id='market' state={steps.market} />
+            <StepCard t={t} id='risk' state={steps.risk} />
           </div>
-          <StepCard id='lead' state={steps.lead} />
+          <StepCard t={t} id='lead' state={steps.lead} />
         </div>
 
       </div>
@@ -230,8 +323,8 @@ export default function ResaleWorkbench({ opportunities }: { opportunities: Oppo
   )
 }
 
-function StepCard({ id, state }: { id: AgentId; state?: StepState }) {
-  const meta = STEPS[id]
+function StepCard({ t, id, state }: { t: Dict; id: AgentId; state?: StepState }) {
+  const meta = t.steps[id]
   const KindIcon = KIND_ICON[meta.kind]
   const status = state?.status
   const Icon = status === 'done' ? Check : status === 'start' ? Loader2 : Circle
@@ -268,10 +361,10 @@ function StepCard({ id, state }: { id: AgentId; state?: StepState }) {
       )}
       {status === 'skipped' && (
         <p className='mt-1 text-[12px]' style={{ color: 'var(--muted)' }}>
-          Skipped — {state?.note}
+          {t.skipped} — {state?.note}
         </p>
       )}
-      {status === 'done' && state?.output && <StepOutput id={id} o={state.output} />}
+      {status === 'done' && state?.output && <StepOutput t={t} id={id} o={state.output} />}
     </div>
   )
 }
@@ -284,27 +377,27 @@ function Line({ children }: { children: React.ReactNode }) {
   )
 }
 
-function StepOutput({ id, o }: { id: AgentId; o: Record<string, unknown> }) {
+function StepOutput({ t, id, o }: { t: Dict; id: AgentId; o: Record<string, unknown> }) {
   const n = (k: string) => (typeof o[k] === 'number' ? mxn(o[k] as number) : '—')
   switch (id) {
     case 'parse':
       return (
         <Line>
-          {String(o.model)} · storage {String(o.storage)} · asking {n('price')} · confidence {Number(o.confidence).toFixed(2)}
+          {String(o.model)} · {t.storage} {String(o.storage)} · {t.asking} {n('price')} · {t.confidence} {Number(o.confidence).toFixed(2)}
         </Line>
       )
     case 'spec':
       return (
         <Line>
-          Storage → {o.ssdGb ? `${o.ssdGb} GB` : 'not stated (kept unknown, no guessing)'} · {String(o.condition)}. {String(o.notes)}
+          {t.storageArrow} → {o.ssdGb ? `${o.ssdGb} GB` : t.notStated} · {String(o.condition)}. {String(o.notes)}
         </Line>
       )
     case 'comps':
       return (
         <Line>
           <span className='site-mono text-[11.5px]'>
-            {Number(o.n).toLocaleString('en-US')} comps · {String(o.scope)} · P25 {n('p25')} · median {n('p50')} · P75 {n('p75')} ·{' '}
-            {Number(o.gone).toLocaleString('en-US')} sold{o.medianDaysToSell != null ? ` in ~${o.medianDaysToSell} d` : ''} · price ceiling{' '}
+            {Number(o.n).toLocaleString('en-US')} {t.comps} · {String(o.scope)} · P25 {n('p25')} · {t.median} {n('p50')} · P75 {n('p75')} ·{' '}
+            {Number(o.gone).toLocaleString('en-US')} {t.sold}{o.medianDaysToSell != null ? t.soldIn(Number(o.medianDaysToSell)) : ''} · {t.ceiling}{' '}
             {n('ceiling')}
           </span>
         </Line>
@@ -313,7 +406,7 @@ function StepOutput({ id, o }: { id: AgentId; o: Record<string, unknown> }) {
       return (
         <>
           <p className='site-mono mt-1 text-[11.5px]'>
-            resale {n('expectedSale')} · demand {String(o.demand)}
+            {t.resale} {n('expectedSale')} · {t.demand} {String(o.demand)}
           </p>
           <Line>{String(o.summary)}</Line>
         </>
@@ -330,9 +423,9 @@ function StepOutput({ id, o }: { id: AgentId; o: Record<string, unknown> }) {
                 color: level === 'low' ? 'var(--live)' : 'var(--accent)',
               }}>
               {level !== 'low' && <ShieldAlert className='h-3 w-3' />}
-              {level} risk
+              {t.risk(level)}
             </span>
-            <span>haircut {String(o.haircutPct)}%</span>
+            <span>{t.haircut} {String(o.haircutPct)}%</span>
             {(o.flags as string[]).map((f) => (
               <span key={f} className='rounded-full px-1.5' style={{ border: '1px solid var(--border)' }}>
                 {f}
@@ -355,11 +448,13 @@ function StepOutput({ id, o }: { id: AgentId; o: Record<string, unknown> }) {
 }
 
 function Verdict({
+  t,
   f,
   listing,
   copied,
   onCopy,
 }: {
+  t: Dict
   f: { result: DeskResult; ms: number; tokens: number; cost: number | null }
   // El anuncio evaluado, cuando no está a la vista en la lista (corrida guardada).
   listing?: string
@@ -369,17 +464,17 @@ function Verdict({
   const r = f.result
   const tone = r.verdict === 'BUY' ? 'var(--live)' : 'var(--accent)'
   const stats = [
-    ['Asking', mxn(r.price)],
-    ['Max buy', mxn(r.maxBuy)],
-    ['Resale', mxn(r.expectedSale)],
-    ...(r.verdict === 'PASS' ? [] : [['Margin', mxn(r.margin)]]),
-    ...(r.daysToSell != null ? [['Sells in', `~${r.daysToSell} d`]] : []),
+    [t.stats.asking, mxn(r.price)],
+    [t.stats.maxBuy, mxn(r.maxBuy)],
+    [t.stats.resale, mxn(r.expectedSale)],
+    ...(r.verdict === 'PASS' ? [] : [[t.stats.margin, mxn(r.margin)]]),
+    ...(r.daysToSell != null ? [[t.stats.sellsIn, `~${r.daysToSell} d`]] : []),
   ]
   return (
     <div className='mt-3 rounded-[14px] p-4' style={{ background: 'var(--card)', border: `1.5px solid ${tone}` }}>
       <div className='flex flex-wrap items-baseline justify-between gap-2'>
         <span className='site-display text-[24px] font-bold' style={{ color: tone, letterSpacing: '-0.02em' }}>
-          {r.verdict}
+          {t.verdict[r.verdict] ?? r.verdict}
         </span>
         <span className='truncate text-[13px] font-medium'>{r.model}</span>
       </div>
@@ -401,16 +496,16 @@ function Verdict({
           guardrail: {r.guardrail}
         </p>
       )}
-      <p className='site-kicker mt-3'>Message to the seller (Spanish)</p>
+      <p className='site-kicker mt-3'>{t.message}</p>
       <div className='mt-1.5 flex items-start gap-2 rounded-[10px] px-3 py-2 text-[13px]' style={{ background: 'var(--bg-2)', lineHeight: 1.5 }}>
         <span className='flex-1'>{r.offerMessage}</span>
-        <button type='button' onClick={onCopy} aria-label='Copy message' className='shrink-0 p-0.5' style={{ color: 'var(--muted)' }}>
+        <button type='button' onClick={onCopy} aria-label={t.copy} className='shrink-0 p-0.5' style={{ color: 'var(--muted)' }}>
           {copied ? <Check className='h-4 w-4' style={{ color: 'var(--live)' }} /> : <Clipboard className='h-4 w-4' />}
         </button>
       </div>
       <p className='site-mono mt-2 text-[11px]' style={{ color: 'var(--muted)' }}>
         {f.tokens.toLocaleString('en-US')} tokens · {f.cost != null ? `$${f.cost.toFixed(4)}` : '—'} · {(f.ms / 1000).toFixed(1)}s ·
-        numbers by code, judgment by LLM
+        {t.footer}
       </p>
     </div>
   )

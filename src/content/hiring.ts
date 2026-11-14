@@ -182,6 +182,8 @@ const en = {
     live: 'live',
     inProduction: 'in production',
   },
+  nav: { projects: 'Projects', production: 'In production', contact: 'Contact', menu: 'Toggle menu' },
+  footer: { clients: 'For clients', solutions: 'Solutions', about: 'About', built: 'Built with Next.js' },
   section: {
     useWhen: 'Use this when',
     howBuilt: 'How it’s built',
@@ -242,17 +244,26 @@ const en = {
     stack: ['Chrome extension', 'Next.js', 'Postgres', 'Multi-agent', 'zod'],
     code: `${REPO}/src/lib/resale`,
     next: 'Next: cross-border sourcing.',
+    fullPage: 'Full page',
   },
   smallBuilds: {
     kicker: 'Smaller builds',
     title: 'Focused features, each one real.',
     items: smallBuilds,
+    imageAlt: 'workflow',
   },
   contact: {
     title: 'Let’s talk.',
     fastest: 'Fastest way to reach me',
+    call: 'Call',
+    cvLive: 'Live link',
+    cvDownload: 'Download',
+    cv: '/cv/Brandon-Soria-CV-EN.pdf',
   },
   talk: {
+    label: 'Talk to my portfolio',
+    endCall: 'End call',
+    connectingLabel: 'Connecting…',
     sub: 'EN · ES',
     caption: 'Ask about my experience and projects, out loud, in English or Spanish.',
     // Mensajes de cada estado de la llamada.
@@ -267,4 +278,228 @@ const en = {
 }
 
 export type HiringCopy = typeof en
-export const hiringCopy = { en }
+
+
+// ── Español ─────────────────────────────────────────────────────────────────
+// Misma estructura que `en`. Los nombres técnicos (tools, librerías, SQL) se
+// quedan en inglés: así se llaman en el código.
+
+const levelsEs: Level[] = [
+  {
+    ...levels[0],
+    verb: 'Responde',
+    name: 'Responde con datos reales',
+    plain: 'Atiende a clientes con las políticas y los pedidos reales de la tienda, y **cita cada fuente**.',
+    facts: [
+      ['3 tools', 'un solo loop, sin framework'],
+      ['≤ 5 pasos', 'por respuesta, y se detiene'],
+      ['Cada respuesta', 'cita su fuente'],
+    ],
+    ladderFact: ['Con fuente', 'en cada respuesta'],
+    useWhen: 'las respuestas existen en documentos o en una base de datos, pero encontrarlas le toma tiempo a una persona.',
+    summary:
+      'Un cliente pregunta, el agente busca la respuesta en las políticas y la base de datos de la tienda, y contesta mostrando de dónde la sacó.',
+    exampleInput: '“¿Tienen iPhone 13? ¿Lo puedo devolver?”',
+    pipeline: [
+      ['Question', 'streamed chat', 'Dos preguntas en un mensaje.', 'Llega la pregunta'],
+      ['Agent loop', 'tool calling, max 5 steps', 'Aquí: la política de devoluciones y el stock.', 'El agente decide qué necesita'],
+      ['search_docs', 'policies in pgvector', 'Encuentra la política de 30 días.', 'Lee la política'],
+      ['find_products · get_order', 'Postgres', 'Encuentra iPhone 13 en stock.', 'Revisa el stock'],
+      ['Answer + trace', 'sources, SQL, cost', 'Responde y cita la política que usó.', 'Responde y muestra su trabajo'],
+    ],
+    decisions: [
+      {
+        question: '¿Por qué no usar un framework de agentes?',
+        choice: 'sin framework',
+        why: 'tres tools y un loop caben en un route handler normal.',
+        tradeoff: 'reintentos y memoria escritos a mano.',
+      },
+      {
+        question: '¿Por qué dos tipos de búsqueda?',
+        choice: 'búsqueda vectorial + SQL',
+        why: 'las políticas son texto ambiguo; el stock y los pedidos necesitan valores exactos.',
+        tradeoff: 'el modelo puede elegir la tool equivocada. La traza lo muestra cuando pasa.',
+      },
+      {
+        question: '¿Por qué el modelo no puede escribir SQL?',
+        choice: 'consultas fijas y parametrizadas',
+        why: 'nada de lo que escribe llega a la base; los argumentos se validan con zod.',
+        tradeoff: 'no responde nada fuera de las tres tools.',
+      },
+    ],
+    failures: [
+      ['No encuentra nada parecido', 'Dice “no lo sé” en vez de adivinar.', 'similarity < 0.3'],
+      ['El modelo llama una tool con argumentos malos', 'El error regresa al modelo. No se cae.', 'zod validation'],
+      ['Alguien intenta abusar', 'Se detiene en 5 pasos por respuesta y 25 consultas por hora.', 'per-visitor rate limit'],
+    ],
+  },
+  {
+    ...levels[1],
+    verb: 'Actúa',
+    name: 'Actúa en el CRM, con aprobación',
+    plain: 'Califica un lead y prepara los cambios en el CRM, y luego **espera a que una persona apruebe**.',
+    facts: [
+      ['6 pasos', 'en una corrida de LangGraph'],
+      ['0 escrituras', 'sin aprobación humana'],
+      ['Sobrevive reinicios', 'estado guardado en Postgres'],
+    ],
+    ladderFact: ['0 cambios', 'sin aprobación'],
+    useWhen: 'la IA debe hacer cambios, pero uno equivocado cuesta dinero o clientes.',
+    summary:
+      'Escribe un lead, el agente lo califica, redacta la respuesta y prepara los cambios en el CRM, y se detiene hasta que una persona aprueba.',
+    exampleInput: '“iPhone 15 Pro hoy, 16 mil pesos.”',
+    pipeline: [
+      ['Qualify', 'intent, budget, score', 'Un comprador, score 85.', 'Evalúa al lead'],
+      ['Look up', 'CRM + inventory via MCP', 'Revisa el contacto y el stock que coincide.', 'Revisa lo que sabe la tienda'],
+      ['Draft + propose', 'reply and actions', 'Escribe la respuesta y los cambios al CRM.', 'Prepara todo'],
+      ['Approval', 'paused, state in Postgres', 'Se detiene aquí. Una persona lo revisa.', 'Espera a una persona'],
+      ['Execute', 'approved actions only', 'Ejecuta solo lo aprobado.', 'Hace solo lo aprobado'],
+    ],
+    decisions: [
+      {
+        question: '¿Por qué LangGraph aquí?',
+        choice: 'LangGraph',
+        why: 'la corrida se pausa por horas y retoma justo donde se quedó.',
+        tradeoff: 'más piezas que el primer sistema.',
+      },
+      {
+        question: '¿Por qué el CRM tiene su propio servidor MCP?',
+        choice: 'un servidor MCP propio',
+        why: 'es la única puerta al CRM, y cualquier agente puede reusarlo.',
+        tradeoff: 'un proceso más que correr.',
+      },
+      {
+        question: '¿Por qué cada escritura necesita a una persona?',
+        choice: 'aprobación humana antes de escribir',
+        why: 'nada cambia antes de aprobar, y solo corren tools de una lista permitida.',
+        tradeoff: 'más lento que la autonomía total.',
+      },
+    ],
+    failures: [
+      ['El agente propone una tool fuera de la lista', 'Se rechaza.', 'allow-list of 4 write tools'],
+      ['El servidor se reinicia a mitad de una aprobación', 'La corrida retoma donde se quedó.', 'Postgres checkpoint'],
+      ['El servicio está dormido (free tier)', 'La página lo dice en vez de esconderlo.', 'cold start shown'],
+    ],
+  },
+]
+
+const smallBuildsEs: SmallBuild[] = [
+  {
+    ...smallBuilds[0],
+    name: 'Clasificación de leads con n8n',
+    plain: 'Ordena los mensajes que llegan y manda a los compradores serios al agente de leads. **Si un paso falla, el lead le llega a una persona.**',
+    status: 'Self-hosted · corre en local · workflow y pruebas en GitHub',
+  },
+]
+
+const es: HiringCopy = {
+  role: 'Ingeniero Full-stack e IA',
+  headline: 'Construyo agentes de IA que hacen trabajo real, y bajo control.',
+  subhead: '**Tres sistemas en vivo.** Pruébalos en esta página.',
+  about: [
+    ['Ubicación', 'Ciudad de México', 'UTC−6'],
+    ['Inglés', 'C1'],
+    ['Stack', 'Python + TypeScript'],
+    ['Clientes', 'Desde 2024'],
+  ],
+  availability: 'Busco tiempo completo · remoto o CDMX',
+  ladder: {
+    kicker: 'Más responsabilidad en cada paso',
+    hint: 'Elige un paso para probarlo',
+    production: 'Decide',
+    productionName: 'Multiagente, con datos del mercado',
+    live: 'en vivo',
+    inProduction: 'en producción',
+  },
+  nav: { projects: 'Proyectos', production: 'En producción', contact: 'Contacto', menu: 'Abrir menú' },
+  footer: { clients: 'Para clientes', solutions: 'Soluciones', about: 'Sobre mí', built: 'Hecho con Next.js' },
+  section: {
+    useWhen: 'Sirve cuando',
+    howBuilt: 'Cómo está hecho',
+    howBuiltHint: 'Un ejemplo paso a paso, y luego las decisiones y lo que cuestan',
+    inOne: 'En una frase:',
+    layers: 'Arriba en palabras simples · abajo la parte técnica',
+    decision: 'Decisión:',
+    open: 'Abrir',
+    close: 'Cerrar',
+    tracked: 'anuncios registrados',
+    example: 'Sigue un ejemplo',
+    decisions: 'Las decisiones, y lo que cuesta cada una',
+    why: 'Porque',
+    tradeoff: 'Cuesta',
+    failures: 'Cuando algo sale mal',
+    code: 'Ver el código',
+  },
+  levels: levelsEs,
+  production: {
+    ...en.production,
+    kicker: '03 · Decide · en producción',
+    plain: 'El sistema que construí para valuar electrónicos usados con **datos reales del mercado**.',
+    facts: [
+      ['4 agentes LLM', 'specs, mercado, riesgo, decisión'],
+      ['< 5 s · $0.001', 'por oferta evaluada'],
+    ],
+    summary:
+      'Navego anuncios, el sistema registra cada precio, el código calcula cuánto vale de verdad un equipo y los agentes juzgan si la compra es segura.',
+    exampleInput: '“iPhone 13 128GB, $6,500.”',
+    pipeline: [
+      ['Chrome extension', 'captures listings', 'Ve el anuncio mientras navego.', 'Ve el anuncio'],
+      ['Ingest API', 'validated, deduped', 'Lo guarda una vez, con su precio.', 'Lo guarda una vez'],
+      ['Price model', 'deterministic code + SQL', 'Calcula el precio de mercado y el máximo a pagar.', 'El código hace las cuentas'],
+      ['Postgres', 'listings, price history', 'Lo guarda con su historial de precios.', 'Recuerda cada precio'],
+      ['Agents', 'judgment only', 'Veredicto: negociar. Oferta escrita.', 'Los agentes dan un veredicto'],
+    ],
+    decisions: [
+      {
+        question: '¿Por qué no dejar que la IA haga las cuentas?',
+        choice: 'código para números, IA para criterio',
+        why: 'los precios y márgenes deben ser exactos, así que son código. Los agentes solo juzgan el texto y las señales de estafa.',
+        tradeoff: 'más código que “pregúntale al modelo”.',
+      },
+      {
+        question: '¿Por qué capturar anuncios con una extensión de Chrome?',
+        choice: 'capturar en la fuente',
+        why: 'manda cada anuncio que navego, tal como lo ve el comprador.',
+        tradeoff: 'solo cubre lo que yo navego.',
+      },
+      {
+        question: '¿Por qué cachear la vista del mercado?',
+        choice: 'caché de 30 minutos',
+        why: 'deja que la base de datos duerma entre visitas.',
+        tradeoff: 'los números pueden tener 30 minutos de antigüedad.',
+      },
+    ],
+    next: 'Siguiente: compras entre países.',
+    fullPage: 'Página completa',
+  },
+  smallBuilds: {
+    kicker: 'Proyectos más chicos',
+    title: 'Funciones puntuales, todas reales.',
+    items: smallBuildsEs,
+    imageAlt: 'workflow',
+  },
+  contact: {
+    title: 'Hablemos.',
+    fastest: 'La forma más rápida de contactarme',
+    call: 'Llamar',
+    cvLive: 'Ver en línea',
+    cvDownload: 'Descargar',
+    cv: '/cv/Brandon-Soria-CV-ES.pdf',
+  },
+  talk: {
+    label: 'Habla con mi portafolio',
+    endCall: 'Colgar',
+    connectingLabel: 'Conectando…',
+    sub: 'ES · EN',
+    caption: 'Pregunta en voz alta por mi experiencia y mis proyectos, en español o en inglés.',
+    connecting: 'Conectando… permite el micrófono cuando tu navegador lo pida.',
+    live: 'En vivo con Leo · solo habla, él te responde.',
+    ended: 'Gracias por llamar. Mis datos de contacto están aquí abajo.',
+    limit: 'Ya se alcanzó el límite de llamadas de hoy. Prueba los tres sistemas de abajo o contáctame directo.',
+    micDenied: 'La llamada necesita tu micrófono. Permítelo en tu navegador e intenta de nuevo.',
+    error: 'No se pudo iniciar la llamada. Intenta de nuevo en un momento.',
+    pending: 'Mi agente de voz estará en vivo pronto. Mientras, prueba los tres sistemas de abajo.',
+  },
+}
+
+export const hiringCopy: Record<'en' | 'es', HiringCopy> = { en, es }

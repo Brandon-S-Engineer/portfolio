@@ -16,6 +16,7 @@ import { GitHubIcon, LinkedInIcon, WhatsAppIcon } from '@/components/site/brand-
 import { LevelBars } from '@/components/site/demo-stage'
 import { hiringCopy } from '@/content/hiring'
 import { site } from '@/content/site'
+import { getSiteLocale } from '@/lib/site/get-locale'
 
 // Home de empleo: la escalera (qué hace cada sistema, en lenguaje llano), la
 // demo real y "How it's built" para quien revisa decisiones y código.
@@ -57,11 +58,12 @@ function Tip({ x, inverse = false }: { x: ContactLink; inverse?: boolean }) {
   )
 }
 
-// Los datos del mercado de reventa se cachean 30 min (ver lib/resale/market).
-export const revalidate = 1800
-
+// El idioma sale de la cookie o del país del visitante, así que la página se
+// pinta por visita; los datos del mercado siguen cacheados 30 min (ver
+// lib/resale/market).
 export default async function HomePage() {
-  const copy = hiringCopy.en
+  const locale = await getSiteLocale()
+  const copy = hiringCopy[locale]
   const snapshot = await getMarketSnapshot()
   const { links: l } = site.hiring
   // Marcas con su color oficial; lo demás hereda el color del texto (negro o blanco).
@@ -70,17 +72,17 @@ export default async function HomePage() {
   const handle = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
   const links: ContactLink[] = [
     { href: `https://wa.me/${l.whatsapp}`, label: 'WhatsApp', icon: WhatsAppIcon, color: '#25D366', detail: phone },
-    { href: `tel:${l.phone}`, label: 'Call', icon: Phone, detail: phone },
+    { href: `tel:${l.phone}`, label: copy.contact.call, icon: Phone, detail: phone },
     { href: `mailto:${l.email}`, label: 'Email', icon: Mail, detail: l.email },
     { href: l.linkedin, label: 'LinkedIn', icon: LinkedInIcon, color: '#0A66C2', detail: handle(l.linkedin) },
     { href: l.github, label: 'GitHub', icon: GitHubIcon, detail: handle(l.github) },
     {
-      href: l.cv,
+      href: copy.contact.cv,
       label: 'CV',
       icon: FileText,
       options: [
-        { label: 'Live link', href: l.cv },
-        { label: 'Download', href: l.cv, download: true },
+        { label: copy.contact.cvLive, href: copy.contact.cv },
+        { label: copy.contact.cvDownload, href: copy.contact.cv, download: true },
       ],
     },
   ]
@@ -146,25 +148,6 @@ export default async function HomePage() {
                 ))}
               </dl>
               <TalkButton copy={copy.talk} />
-              {/* Solo en celular: el teléfono a un toque, sin depender del hover. */}
-              <div className='rounded-[14px] p-3.5 sm:hidden' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-                <p className='site-mono text-[10.5px] font-bold uppercase' style={{ letterSpacing: '0.1em', color: 'var(--muted)' }}>
-                  {copy.contact.fastest}
-                </p>
-                <p className='site-display mt-1 text-[22px] font-bold' style={{ letterSpacing: '-0.01em' }}>
-                  {phone}
-                </p>
-                <div className='mt-3 grid grid-cols-2 gap-2'>
-                  <a href={wa.href} {...tabProps(wa.href)} className='site-btn h-12 text-[15px]' style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
-                    <WhatsAppIcon className='h-[18px] w-[18px]' />
-                    {wa.label}
-                  </a>
-                  <a href={call.href} className='site-btn site-btn-outline h-12 text-[15px]'>
-                    <Phone className='h-[18px] w-[18px]' />
-                    {call.label}
-                  </a>
-                </div>
-              </div>
             </div>
             <LevelLadder copy={copy} productionFact={tracked ?? p.facts[0]} />
           </div>
@@ -190,12 +173,12 @@ export default async function HomePage() {
               <a
                 href={wa.href}
                 {...tabProps(wa.href)}
-                className='site-btn h-11 px-4 text-[14px]'
+                className='site-btn h-11 px-4 text-[14px] whitespace-nowrap'
                 style={{ background: '#0E7A53', color: '#fff' }}>
                 <WhatsAppIcon className='h-4 w-4' />
                 {wa.label}
               </a>
-              <a href={call.href} className='site-btn site-btn-outline h-11 px-4 text-[14px]'>
+              <a href={call.href} className='site-btn site-btn-outline h-11 px-4 text-[14px] whitespace-nowrap'>
                 <Phone className='h-4 w-4' />
                 {call.label}
               </a>
@@ -207,7 +190,7 @@ export default async function HomePage() {
               <a
                 href={x.href}
                 {...tabProps(x.href)}
-                className='site-lift site-contact flex flex-1 flex-col items-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
+                className='site-lift site-contact flex flex-1 flex-col items-center justify-center gap-2 rounded-[14px] px-2 py-4 text-[13.5px] font-semibold'
                 style={{ background: 'var(--card)', border: '1px solid var(--border)', '--brand': x.color } as CSSProperties}>
                 <x.icon className='site-contact-icon h-6 w-6' style={{ color: x.color }} />
                 {x.label}
@@ -259,11 +242,11 @@ export default async function HomePage() {
               brandon-s-engineer.com/resale
             </span>
             <Link href='/resale' className='inline-flex shrink-0 items-center gap-1 text-[12.5px]' style={{ color: 'var(--accent)' }}>
-              Full page <ArrowUpRight className='h-3.5 w-3.5' />
+              {p.fullPage} <ArrowUpRight className='h-3.5 w-3.5' />
             </Link>
           </div>
           <div className='p-4 sm:p-6'>
-            <ResaleIntel snapshot={snapshot} embedded />
+            <ResaleIntel snapshot={snapshot} embedded locale={locale} />
           </div>
         </div>
         <BuildDetails
@@ -318,7 +301,7 @@ export default async function HomePage() {
                 {x.image && (
                   <Image
                     src={x.image}
-                    alt={`${x.name} workflow`}
+                    alt={`${x.name} ${copy.smallBuilds.imageAlt}`}
                     width={1800}
                     height={534}
                     sizes='(min-width: 1120px) 1072px, 100vw'

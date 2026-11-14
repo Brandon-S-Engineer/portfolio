@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { site } from '@/content/site'
+import { hiringCopy } from '@/content/hiring'
+import type { Locale } from '@/lib/site/locale'
 
-export default function SiteFooter() {
+export default function SiteFooter({ locale = 'en' }: { locale?: Locale }) {
+  const copy = hiringCopy[locale]
+  const t = copy.footer
   return (
     <footer style={{ borderTop: '1px solid var(--border)' }}>
       <div className='mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-6 px-6 py-9'>
@@ -14,7 +18,7 @@ export default function SiteFooter() {
           <p
             className='mt-1 text-[13.5px]'
             style={{ color: 'var(--muted)' }}>
-            {site.role}
+            {copy.role}
           </p>
         </div>
         <div
@@ -23,7 +27,7 @@ export default function SiteFooter() {
           <Link
             href='/agency'
             className='transition-colors hover:text-[var(--fg)]'>
-            For clients
+            {t.clients}
           </Link>
           <Link
             href='/mvp-saas'
@@ -33,19 +37,19 @@ export default function SiteFooter() {
           <Link
             href='/solutions'
             className='transition-colors hover:text-[var(--fg)]'>
-            Solutions
+            {t.solutions}
           </Link>
           <Link
             href='/about'
             className='transition-colors hover:text-[var(--fg)]'>
-            About
+            {t.about}
           </Link>
         </div>
       </div>
       <div
         className='site-mono px-6 py-4 text-center text-[11.5px]'
         style={{ borderTop: '1px solid var(--border)', color: 'var(--muted)' }}>
-        © {new Date().getFullYear()} {site.name} · Built with Next.js
+        © {new Date().getFullYear()} {site.name} · {t.built}
       </div>
     </footer>
   )

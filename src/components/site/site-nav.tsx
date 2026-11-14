@@ -7,16 +7,19 @@ import { Menu, X } from 'lucide-react'
 import SiteThemeToggle from '@/components/site/site-theme-toggle'
 import { site } from '@/content/site'
 import { TALK_EVENT, TalkPill } from '@/components/site/hiring/talk-button'
+import LangToggle from '@/components/site/lang-toggle'
+import { useLocale } from '@/components/site/locale-context'
+import { hiringCopy } from '@/content/hiring'
 
 // El home es de una sola vista: el menú salta a sus secciones. Las páginas de
 // agencia (/agency, /services, /solutions, /mvp-saas) se enlazan desde el footer.
-const links = [
-  { href: '/#projects', label: 'Projects' },
-  { href: '/#production', label: 'In production' },
-  { href: '/#contact', label: 'Contact' },
-]
-
 export default function SiteNav() {
+  const copy = hiringCopy[useLocale()]
+  const links = [
+    { href: '/#projects', label: copy.nav.projects },
+    { href: '/#production', label: copy.nav.production },
+    { href: '/#contact', label: copy.nav.contact },
+  ]
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
@@ -70,18 +73,20 @@ export default function SiteNav() {
               </Link>
             )
           })}
-          <div className='ml-1.5'>
+          <div className='ml-1.5 flex items-center gap-1.5'>
+            <LangToggle />
             <SiteThemeToggle />
           </div>
           <div className='ml-3'>
-            <TalkPill size='sm' onClick={talk} />
+            <TalkPill size='sm' onClick={talk} label={copy.talk.label} />
           </div>
         </nav>
 
         <div className='flex items-center gap-1.5 md:hidden'>
+          <LangToggle />
           <SiteThemeToggle />
           <button
-            aria-label='Toggle menu'
+            aria-label={copy.nav.menu}
             onClick={() => setOpen((v) => !v)}
             className='grid h-9 w-9 place-items-center rounded-[9px] border'
             style={{ borderColor: 'var(--border)', background: 'var(--card)', color: 'var(--fg)' }}>
@@ -106,7 +111,7 @@ export default function SiteNav() {
               </Link>
             ))}
             <div className='mt-3 mb-2 flex'>
-              <TalkPill size='sm' onClick={talk} />
+              <TalkPill size='sm' onClick={talk} label={copy.talk.label} />
             </div>
           </nav>
         </div>

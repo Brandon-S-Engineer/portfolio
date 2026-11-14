@@ -5,7 +5,8 @@ import { LevelBars } from '@/components/site/demo-stage'
 // Escalones del hero: cada sistema más alto que el anterior, y el más alto es
 // el que corre en producción. Cada uno lleva su dato duro. Son anchors a sus
 // secciones; no necesitan estado. En móvil son filas que se van ensanchando.
-const STEP_H = ['sm:h-[196px]', 'sm:h-[236px]', 'sm:h-[276px]']
+// Altura mínima, no fija: en español los textos son más largos y deben caber.
+const STEP_H = ['sm:min-h-[196px]', 'sm:min-h-[236px]', 'sm:min-h-[276px]']
 const ROW_INSET = ['mr-11', 'mr-[22px]', '']
 
 export default function LevelLadder({ copy, productionFact }: { copy: HiringCopy; productionFact: [string, string] }) {

@@ -3,12 +3,13 @@
 
 import { ArrowRight } from 'lucide-react'
 import type { MarketSnapshot } from '@/lib/resale/types'
+import type { Locale } from '@/lib/site/locale'
 import MarketRanges from './market-ranges'
 import ResaleWorkbench from './resale-workbench'
 
 const fmtN = (n: number) => n.toLocaleString('en-US')
-const fmtDate = (iso: string, withTime = false) =>
-  new Intl.DateTimeFormat('en-US', {
+const fmtDate = (iso: string, withTime = false, locale: Locale = 'en') =>
+  new Intl.DateTimeFormat(locale === 'es' ? 'es-MX' : 'en-US', {
     month: 'short',
     day: 'numeric',
     ...(withTime ? { hour: 'numeric', minute: '2-digit' } : {}),
@@ -23,22 +24,56 @@ const PIPELINE = [
   ['Agents', 'LLM judgment on top of the numbers'],
 ]
 
+const T = {
+  en: {
+    unavailable: 'Live market data is temporarily unavailable.',
+    tracked: 'Listings tracked',
+    since: 'since',
+    sold: 'Likely sold',
+    soldSub: 'tracked ≥20 h, then gone',
+    changes: 'Price changes logged',
+    changesSub: 'every re-capture',
+    new7: 'New in last 7 days',
+    realData: 'real data · last capture',
+  },
+  es: {
+    unavailable: 'Los datos del mercado no están disponibles por ahora.',
+    tracked: 'Anuncios registrados',
+    since: 'desde',
+    sold: 'Probablemente vendidos',
+    soldSub: 'vistos ≥20 h y luego retirados',
+    changes: 'Cambios de precio',
+    changesSub: 'en cada nueva captura',
+    new7: 'Nuevos en 7 días',
+    realData: 'datos reales · última captura',
+  },
+}
+
 // `embedded`: en el home el título y el pipeline ya los pone la sección, así
-// que aquí solo van los datos.
-export default function ResaleIntel({ snapshot, embedded = false }: { snapshot: MarketSnapshot | null; embedded?: boolean }) {
+// que aquí solo van los datos. `locale` solo cambia en el home.
+export default function ResaleIntel({
+  snapshot,
+  embedded = false,
+  locale = 'en',
+}: {
+  snapshot: MarketSnapshot | null
+  embedded?: boolean
+  locale?: Locale
+}) {
+  const t = T[locale]
   if (!snapshot) {
     return (
       <p className='text-[14px]' style={{ color: 'var(--muted)' }}>
-        Live market data is temporarily unavailable.
+        {t.unavailable}
       </p>
     )
   }
   const { totals } = snapshot
   const kpis = [
-    ['Listings tracked', fmtN(totals.tracked), snapshot.firstCapture ? `since ${fmtDate(snapshot.firstCapture)}` : ''],
-    ['Likely sold', fmtN(totals.gone), 'tracked ≥20 h, then gone'],
-    ['Price changes logged', fmtN(totals.priceChanges), 'every re-capture'],
-    ['New in last 7 days', fmtN(totals.new7d), 'iPhone, iPad, Mac, audio'],
+    [t.tracked, fmtN(totals.tracked), snapshot.firstCapture ? `${t.since} ${fmtDate(snapshot.firstCapture, false, locale)}` : ''],
+    [t.sold, fmtN(totals.gone), t.soldSub],
+    [t.changes, fmtN(totals.priceChanges), t.changesSub],
+    [t.new7, fmtN(totals.new7d), 'iPhone, iPad, Mac, audio'],
   ]
 
   return (
@@ -56,7 +91,7 @@ export default function ResaleIntel({ snapshot, embedded = false }: { snapshot: 
             className='site-mono inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px]'
             style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>
             <span className='site-pulse h-[7px] w-[7px] rounded-full' style={{ background: 'var(--live)' }} />
-            real data · last capture {fmtDate(snapshot.lastCapture, true)}
+            {t.realData} {fmtDate(snapshot.lastCapture, true, locale)}
           </span>
         )}
       </div>
@@ -102,8 +137,8 @@ export default function ResaleIntel({ snapshot, embedded = false }: { snapshot: 
         </ol>
       )}
 
-      <MarketRanges bands={snapshot.bands} />
-      <ResaleWorkbench opportunities={snapshot.opportunities} />
+      <MarketRanges bands={snapshot.bands} locale={locale} />
+      <ResaleWorkbench opportunities={snapshot.opportunities} locale={locale} />
     </div>
   )
 }

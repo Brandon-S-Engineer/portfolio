@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Circle, Loader2, PauseCircle, Send, X } from 'lucide-react'
 import { site } from '@/content/site'
 import { leadRun } from '@/content/recorded-runs'
+import { useLocale } from '@/components/site/locale-context'
 
 const API = process.env.NEXT_PUBLIC_LEAD_AGENT_URL || site.leadAgentUrl
 
@@ -24,12 +25,133 @@ const NODES = [
 
 // Lo que hace cada nodo mientras el LLM o MCP trabajan; rota para que el
 // panel nunca se quede quieto en los ~15 s del free tier.
-const THINKING: Record<string, string[]> = {
-  qualify: ['Reading the message…', 'Detecting intent and language…', 'Scoring the lead 0–100…', 'Estimating budget and urgency…'],
-  lookup: ['Calling find_contact over MCP…', 'Calling search_inventory over MCP…', 'Matching models and budget…'],
-  draft_reply: ['Grounding the reply in stock and store facts…', 'Writing the reply…'],
-  propose_actions: ['Reading the MCP tool schemas…', 'Choosing CRM actions…', 'Filling tool arguments…'],
-  execute: ['Running approved tools over MCP…', 'Writing to Postgres…'],
+const T = {
+  en: {
+    nodes: {
+      qualify: 'Qualify',
+      lookup: 'Look up',
+      draft_reply: 'Draft reply',
+      propose_actions: 'Propose CRM actions',
+      approval: 'Human approval',
+      execute: 'Execute',
+    } as Record<string, string>,
+    thinking: {
+      qualify: ['Reading the message…', 'Detecting intent and language…', 'Scoring the lead 0–100…', 'Estimating budget and urgency…'],
+      lookup: ['Calling find_contact over MCP…', 'Calling search_inventory over MCP…', 'Matching models and budget…'],
+      draft_reply: ['Grounding the reply in stock and store facts…', 'Writing the reply…'],
+      propose_actions: ['Reading the MCP tool schemas…', 'Choosing CRM actions…', 'Filling tool arguments…'],
+      execute: ['Running approved tools over MCP…', 'Writing to Postgres…'],
+    } as Record<string, string[]>,
+    presets: { hot: 'Hot lead + trade-in', spam: 'Spam' } as Record<string, string>,
+    inbound: 'Inbound WhatsApp lead',
+    up: 'Python service up',
+    down: 'service offline',
+    waking: 'waking Python service…',
+    savedRun: (
+      <>
+        On the right is a saved run of the hot lead. Now run one <b style={{ color: 'var(--fg)' }}>live</b>:
+      </>
+    ),
+    name: 'Name',
+    leadName: 'Lead name',
+    contact: 'Email or phone',
+    leadContact: 'Lead email or phone',
+    leadMessage: 'Lead message',
+    runLive: 'Run the agent live',
+    run: 'Run the agent',
+    graphRecorded: 'What the agent did · LangGraph',
+    graphLive: 'LangGraph · live',
+    stopped: 'stopped here',
+    pick: (
+      <>
+        Pick a lead and run it. The agent <b>stops</b> before changing anything, until you approve.
+      </>
+    ),
+    recorded: 'recorded run · real output',
+    paused: (
+      <>
+        <b>Paused before any write.</b> Nothing changes in the CRM until a person approves.
+      </>
+    ),
+    streaming: 'Streaming tokens…',
+    qual: { intent: 'intent', score: 'score', urgency: 'urgency' },
+    drafted: 'Drafted reply',
+    proposed: 'Proposed CRM actions',
+    waiting: '· waiting for approval',
+    executed: '✓ executed via MCP',
+    stoppedRun: 'This run stopped here. Run the agent live to approve or reject its actions yourself.',
+    approve: 'Approve',
+    reject: 'Reject all',
+    done: (n: number) => `${n} actions executed through MCP — see the CRM below.`,
+    rejected: 'Rejected. Nothing was written to the CRM.',
+    none: 'No CRM actions proposed.',
+    pipeline: 'CRM pipeline · Postgres',
+    stages: { new: 'new', qualified: 'qualified', quoted: 'quoted', won: 'won', lost: 'lost' } as Record<string, string>,
+    failed: 'Request failed',
+  },
+  es: {
+    nodes: {
+      qualify: 'Calificar',
+      lookup: 'Consultar',
+      draft_reply: 'Redactar respuesta',
+      propose_actions: 'Proponer cambios al CRM',
+      approval: 'Aprobación humana',
+      execute: 'Ejecutar',
+    } as Record<string, string>,
+    thinking: {
+      qualify: ['Leyendo el mensaje…', 'Detectando intención e idioma…', 'Calificando el lead de 0 a 100…', 'Estimando presupuesto y urgencia…'],
+      lookup: ['Llamando find_contact por MCP…', 'Llamando search_inventory por MCP…', 'Cruzando modelos y presupuesto…'],
+      draft_reply: ['Basando la respuesta en el stock y los datos de la tienda…', 'Escribiendo la respuesta…'],
+      propose_actions: ['Leyendo los esquemas de tools MCP…', 'Eligiendo cambios al CRM…', 'Llenando los argumentos…'],
+      execute: ['Ejecutando por MCP las tools aprobadas…', 'Escribiendo en Postgres…'],
+    } as Record<string, string[]>,
+    presets: { hot: 'Lead caliente + a cuenta', spam: 'Spam' } as Record<string, string>,
+    inbound: 'Lead entrante por WhatsApp',
+    up: 'servicio Python activo',
+    down: 'servicio fuera de línea',
+    waking: 'despertando el servicio Python…',
+    savedRun: (
+      <>
+        A la derecha está una corrida grabada del lead caliente. Ahora corre uno <b style={{ color: 'var(--fg)' }}>en vivo</b>:
+      </>
+    ),
+    name: 'Nombre',
+    leadName: 'Nombre del lead',
+    contact: 'Correo o teléfono',
+    leadContact: 'Correo o teléfono del lead',
+    leadMessage: 'Mensaje del lead',
+    runLive: 'Correr el agente en vivo',
+    run: 'Correr el agente',
+    graphRecorded: 'Lo que hizo el agente · LangGraph',
+    graphLive: 'LangGraph · en vivo',
+    stopped: 'se detuvo aquí',
+    pick: (
+      <>
+        Elige un lead y córrelo. El agente se <b>detiene</b> antes de cambiar nada, hasta que apruebes.
+      </>
+    ),
+    recorded: 'corrida grabada · salida real',
+    paused: (
+      <>
+        <b>En pausa antes de escribir.</b> Nada cambia en el CRM hasta que una persona apruebe.
+      </>
+    ),
+    streaming: 'Recibiendo tokens…',
+    qual: { intent: 'intención', score: 'score', urgency: 'urgencia' },
+    drafted: 'Respuesta redactada',
+    proposed: 'Cambios propuestos al CRM',
+    waiting: '· esperando aprobación',
+    executed: '✓ ejecutado por MCP',
+    stoppedRun: 'Esta corrida se detuvo aquí. Corre el agente en vivo para aprobar o rechazar sus cambios tú mismo.',
+    approve: 'Aprobar',
+    reject: 'Rechazar todo',
+    done: (n: number) => `${n} cambios ejecutados por MCP. Míralos en el CRM de abajo.`,
+    rejected: 'Rechazado. No se escribió nada en el CRM.',
+    none: 'No propuso cambios al CRM.',
+    pipeline: 'Pipeline del CRM · Postgres',
+    stages: { new: 'nuevo', qualified: 'calificado', quoted: 'cotizado', won: 'ganado', lost: 'perdido' } as Record<string, string>,
+    failed: 'La solicitud falló',
+  },
 }
 
 const STAGES = ['new', 'qualified', 'quoted', 'won', 'lost'] as const
@@ -42,12 +164,12 @@ const HEALTH_WAIT_MS = 5000
 
 const PRESETS = [
   {
-    label: 'Hot lead + trade-in',
+    id: 'hot',
     name: 'Carlos',
     contact: 'carlos@example.com',
     message: 'Hola! busco un iPhone 15 Pro, tengo como 19 mil y lo necesito esta semana. ¿Aceptan mi iPhone 12 a cuenta?',
   },
-  { label: 'Spam', name: '', contact: '+52 55 9999 0000', message: 'CLICK HERE to win FREE bitcoin!!! www.win-btc.xyz' },
+  { id: 'spam', name: '', contact: '+52 55 9999 0000', message: 'CLICK HERE to win FREE bitcoin!!! www.win-btc.xyz' },
 ]
 
 export type Action = { tool: string; args: Record<string, unknown>; why: string }
@@ -55,6 +177,7 @@ export type Qualification = { intent: string; score: number; urgency: string; bu
 type Contact = { id: number; contact_key: string; name: string | null; interest: string | null; score: number | null; stage: string }
 
 export default function LeadAgentDemo() {
+  const t = T[useLocale()]
   const [awake, setAwake] = useState<'waking' | 'up' | 'down'>('waking')
   const [form, setForm] = useState(PRESETS[0])
   // Mientras `recorded` sea true, lo que se ve es la corrida guardada del
@@ -109,7 +232,7 @@ export default function LeadAgentDemo() {
   async function consume(res: Response) {
     if (!res.ok || !res.body) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.detail ?? 'Request failed')
+      throw new Error(err.detail ?? t.failed)
     }
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
@@ -210,7 +333,7 @@ export default function LeadAgentDemo() {
     return () => clearInterval(id)
   }, [busy])
 
-  const lines = (active && THINKING[active]) || []
+  const lines = (active && t.thinking[active]) || []
   const thinking = lines[Math.floor((now - stepStart.current) / 2200) % Math.max(lines.length, 1)]
   const streaming = active === 'draft_reply' && reply.length > 0
   const focusKey = form.contact.trim().toLowerCase()
@@ -221,52 +344,52 @@ export default function LeadAgentDemo() {
         {/* INBOUND MESSAGE */}
         <div className='min-w-0 p-5' style={{ borderBottom: '1px solid var(--border)' }}>
           <div className='flex items-center justify-between gap-2'>
-            <span className='site-kicker'>Inbound WhatsApp lead</span>
+            <span className='site-kicker'>{t.inbound}</span>
             <span className='site-mono inline-flex items-center gap-1.5 text-[11.5px]' style={{ color: 'var(--muted)' }}>
               <span
                 className='h-[7px] w-[7px] rounded-full'
                 style={{ background: awake === 'up' ? 'var(--live)' : awake === 'down' ? 'var(--accent)' : 'var(--muted)' }}
               />
-              {awake === 'up' ? 'Python service up' : awake === 'down' ? 'service offline' : 'waking Python service…'}
+              {awake === 'up' ? t.up : awake === 'down' ? t.down : t.waking}
             </span>
           </div>
           {recorded && (
             <p className='mt-3 text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
-              On the right is a saved run of the hot lead. Now run one <b style={{ color: 'var(--fg)' }}>live</b>:
+              {t.savedRun}
             </p>
           )}
           <div className='mt-3 flex flex-wrap gap-2'>
             {PRESETS.map((p) => (
               <button
-                key={p.label}
+                key={p.id}
                 type='button'
                 disabled={busy}
                 onClick={() => setForm(p)}
                 className='site-pick rounded-full px-3 py-1 text-[12.5px] disabled:opacity-50'
                 style={{
                   border: '1px solid var(--border)',
-                  background: form.label === p.label ? 'var(--accent-soft)' : 'transparent',
-                  color: form.label === p.label ? 'var(--accent)' : 'var(--muted)',
+                  background: form.id === p.id ? 'var(--accent-soft)' : 'transparent',
+                  color: form.id === p.id ? 'var(--accent)' : 'var(--muted)',
                 }}>
-                {p.label}
+                {t.presets[p.id]}
               </button>
             ))}
           </div>
           <div className='mt-3 grid grid-cols-2 gap-2'>
             <input
               value={form.name}
-              onChange={(e) => setForm({ ...form, label: 'custom', name: e.target.value })}
-              placeholder='Name'
-              aria-label='Lead name'
+              onChange={(e) => setForm({ ...form, id: 'custom', name: e.target.value })}
+              placeholder={t.name}
+              aria-label={t.leadName}
               maxLength={80}
               className='h-10 min-w-0 rounded-[10px] px-3 text-[13.5px]'
               style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}
             />
             <input
               value={form.contact}
-              onChange={(e) => setForm({ ...form, label: 'custom', contact: e.target.value })}
-              placeholder='Email or phone'
-              aria-label='Lead email or phone'
+              onChange={(e) => setForm({ ...form, id: 'custom', contact: e.target.value })}
+              placeholder={t.contact}
+              aria-label={t.leadContact}
               maxLength={120}
               className='h-10 min-w-0 rounded-[10px] px-3 text-[13.5px]'
               style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}
@@ -274,10 +397,10 @@ export default function LeadAgentDemo() {
           </div>
           <textarea
             value={form.message}
-            onChange={(e) => setForm({ ...form, label: 'custom', message: e.target.value })}
+            onChange={(e) => setForm({ ...form, id: 'custom', message: e.target.value })}
             rows={4}
             maxLength={800}
-            aria-label='Lead message'
+            aria-label={t.leadMessage}
             className='mt-2 w-full resize-none rounded-[10px] px-3 py-2 text-[13.5px]'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', lineHeight: 1.5 }}
           />
@@ -287,7 +410,7 @@ export default function LeadAgentDemo() {
             disabled={busy || awake === 'down' || form.message.trim().length < 3 || form.contact.trim().length < 5}
             className='site-btn site-btn-accent site-cta mt-2 h-11 w-full justify-center text-[14.5px] disabled:opacity-50'>
             {phase === 'running' ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}
-            {recorded ? 'Run the agent live' : 'Run the agent'}
+            {recorded ? t.runLive : t.run}
           </button>
           {error && (
             <p className='mt-2 text-[13px]' style={{ color: 'var(--accent)' }}>
@@ -296,7 +419,7 @@ export default function LeadAgentDemo() {
           )}
 
           {/* GRAPH */}
-          <p className='site-kicker mt-6'>{recorded ? 'What the agent did · LangGraph' : 'LangGraph · live'}</p>
+          <p className='site-kicker mt-6'>{recorded ? t.graphRecorded : t.graphLive}</p>
           <ol className='mt-2 space-y-1.5'>
             {NODES.map((n) => {
               const isDone = done.includes(n.id) || (n.id === 'approval' && (phase === 'executing' || phase === 'finished'))
@@ -309,7 +432,7 @@ export default function LeadAgentDemo() {
                     style={{ color: isDone ? 'var(--live)' : isActive ? 'var(--accent)' : 'var(--border)' }}
                   />
                   <span className='font-medium' style={{ opacity: isDone || isActive ? 1 : 0.55 }}>
-                    {n.label}
+                    {t.nodes[n.id]}
                   </span>
                   <span className='site-mono truncate text-[11px]' style={{ color: 'var(--muted)' }}>
                     {n.hint}
@@ -321,7 +444,7 @@ export default function LeadAgentDemo() {
                   )}
                   {isActive && n.id === 'approval' && (
                     <span className='site-mono ml-auto shrink-0 text-[11px] font-bold' style={{ color: 'var(--accent)' }}>
-                      stopped here
+                      {t.stopped}
                     </span>
                   )}
                 </li>
@@ -334,12 +457,12 @@ export default function LeadAgentDemo() {
         <div className='min-w-0 p-5 lg:border-l' style={{ borderColor: 'var(--border)', borderBottom: '1px solid var(--border)', background: 'var(--bg-2)' }}>
           {!qual && !busy && (
             <p className='text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-              Pick a lead and run it. The agent <b>stops</b> before changing anything, until you approve.
+              {t.pick}
             </p>
           )}
           {recorded && (
             <p className='site-mono mb-3 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold' style={{ background: 'var(--card)', color: 'var(--muted)' }}>
-              recorded run · real output · {leadRun.model}
+              {t.recorded} · {leadRun.model}
             </p>
           )}
           {(recorded || phase === 'approval') && (
@@ -348,7 +471,7 @@ export default function LeadAgentDemo() {
               style={{ background: 'var(--card)', border: '1.5px solid var(--accent)', lineHeight: 1.4 }}>
               <PauseCircle className='h-5 w-5 shrink-0' style={{ color: 'var(--accent)' }} />
               <span>
-                <b>Paused before any write.</b> Nothing changes in the CRM until a person approves.
+                {t.paused}
               </span>
             </div>
           )}
@@ -366,7 +489,7 @@ export default function LeadAgentDemo() {
                   />
                 ))}
               </span>
-              <span className='min-w-0 flex-1 truncate'>{streaming ? 'Streaming tokens…' : thinking}</span>
+              <span className='min-w-0 flex-1 truncate'>{streaming ? t.streaming : thinking}</span>
               <span className='site-mono shrink-0 text-[11px]' style={{ color: 'var(--muted)' }}>
                 {model && `${model} · `}
                 {(Math.max(0, now - runStart.current) / 1000).toFixed(1)}s
@@ -383,9 +506,9 @@ export default function LeadAgentDemo() {
           {qual && (
             <div className='site-mono grid grid-cols-3 gap-2 text-center text-[11.5px]'>
               {[
-                ['intent', qual.intent],
-                ['score', `${qual.score}/100`],
-                ['urgency', qual.urgency.replace(/_/g, ' ')],
+                [t.qual.intent, qual.intent],
+                [t.qual.score, `${qual.score}/100`],
+                [t.qual.urgency, qual.urgency.replace(/_/g, ' ')],
               ].map(([k, v]) => (
                 <div key={k} className='rounded-[10px] p-2' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                   <div style={{ color: 'var(--muted)' }}>{k}</div>
@@ -396,7 +519,7 @@ export default function LeadAgentDemo() {
           )}
           {phase === 'running' && !reply && (
             <div className='mt-3'>
-              <p className='site-kicker'>Drafted reply</p>
+              <p className='site-kicker'>{t.drafted}</p>
               <div className='mt-1.5 space-y-2 rounded-[12px] px-3.5 py-3' style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                 {['92%', '100%', '64%'].map((w) => (
                   <div key={w} className='site-skeleton h-[10px]' style={{ width: w }} />
@@ -406,7 +529,7 @@ export default function LeadAgentDemo() {
           )}
           {reply && (
             <div className='mt-3'>
-              <p className='site-kicker'>Drafted reply</p>
+              <p className='site-kicker'>{t.drafted}</p>
               <div
                 className='mt-1.5 rounded-[12px] px-3.5 py-2.5 text-[13.5px]'
                 style={{ background: 'var(--card)', border: '1px solid var(--border)', lineHeight: 1.5 }}>
@@ -417,7 +540,7 @@ export default function LeadAgentDemo() {
           )}
           {phase === 'running' && actions.length === 0 && (
             <div className='mt-4'>
-              <p className='site-kicker'>Proposed CRM actions</p>
+              <p className='site-kicker'>{t.proposed}</p>
               <div className='mt-1.5 space-y-1.5'>
                 {[0, 1, 2].map((i) => (
                   <div key={i} className='site-skeleton h-[44px]' style={{ opacity: 1 - i * 0.25 }} />
@@ -427,7 +550,7 @@ export default function LeadAgentDemo() {
           )}
           {actions.length > 0 && (
             <div className='mt-4'>
-              <p className='site-kicker'>Proposed CRM actions {(phase === 'approval' || recorded) && '· waiting for approval'}</p>
+              <p className='site-kicker'>{t.proposed} {(phase === 'approval' || recorded) && t.waiting}</p>
               <ul className='mt-1.5 space-y-1.5'>
                 {actions.map((a, i) => {
                   // Se ejecutan en orden solo las seleccionadas.
@@ -453,7 +576,7 @@ export default function LeadAgentDemo() {
                           </span>
                           {executed && (
                             <span className='site-mono mt-0.5 block text-[11px]' style={{ color: 'var(--live)' }}>
-                              ✓ executed via MCP
+                              {t.executed}
                             </span>
                           )}
                         </span>
@@ -464,7 +587,7 @@ export default function LeadAgentDemo() {
               </ul>
               {recorded && (
                 <p className='mt-3 text-[13px]' style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
-                  This run stopped here. Run the agent live to approve or reject its actions yourself.
+                  {t.stoppedRun}
                 </p>
               )}
               {phase === 'approval' && (
@@ -474,13 +597,13 @@ export default function LeadAgentDemo() {
                     onClick={() => decide(true)}
                     disabled={!selected.some(Boolean)}
                     className='site-btn site-btn-accent h-10 flex-1 justify-center text-[14px] disabled:opacity-50'>
-                    <Check className='h-4 w-4' /> Approve {selected.filter(Boolean).length}
+                    <Check className='h-4 w-4' /> {t.approve} {selected.filter(Boolean).length}
                   </button>
                   <button
                     type='button'
                     onClick={() => decide(false)}
                     className='site-btn site-btn-outline h-10 flex-1 justify-center text-[14px]'>
-                    <X className='h-4 w-4' /> Reject all
+                    <X className='h-4 w-4' /> {t.reject}
                   </button>
                 </div>
               )}
@@ -488,12 +611,12 @@ export default function LeadAgentDemo() {
           )}
           {phase === 'finished' && (
             <p className='mt-3 text-[13px]' style={{ color: 'var(--muted)' }}>
-              {results.length ? `${results.length} actions executed through MCP — see the CRM below.` : 'Rejected. Nothing was written to the CRM.'}
+              {results.length ? t.done(results.length) : t.rejected}
             </p>
           )}
           {qual && actions.length === 0 && phase === 'approval' && (
             <p className='mt-3 text-[13px]' style={{ color: 'var(--muted)' }}>
-              No CRM actions proposed.
+              {t.none}
             </p>
           )}
         </div>
@@ -501,12 +624,12 @@ export default function LeadAgentDemo() {
 
       {/* CRM KANBAN */}
       <div className='p-5'>
-        <p className='site-kicker'>CRM pipeline · Postgres</p>
+        <p className='site-kicker'>{t.pipeline}</p>
         <div className='mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5'>
           {STAGES.map((s) => (
             <div key={s} className='min-w-0 rounded-[12px] p-2' style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
               <p className='site-mono px-1 text-[11px] uppercase' style={{ color: 'var(--muted)' }}>
-                {s} · {crm.filter((c) => c.stage === s).length}
+                {t.stages[s]} · {crm.filter((c) => c.stage === s).length}
               </p>
               <div className='mt-1.5 space-y-1.5'>
                 {crm

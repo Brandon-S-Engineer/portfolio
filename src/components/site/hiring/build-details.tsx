@@ -44,7 +44,7 @@ export default function BuildDetails({
             {t.howBuiltHint}
           </span>
         </span>
-        <span className='site-btn site-built-btn h-11 shrink-0 px-4 text-[14px]'>
+        <span className='site-btn site-btn-accent site-cta site-built-btn h-11 shrink-0 px-4 text-[14px] whitespace-nowrap'>
           <span className='group-open:hidden'>{t.open}</span>
           <span className='hidden group-open:inline'>{t.close}</span>
           <ChevronDown className='h-4 w-4 transition-transform group-open:rotate-180' />

@@ -244,7 +244,7 @@ export default function TalkButton({ copy }: { copy: HiringCopy['talk'] }) {
       <Orbits />
       <TalkPill
         sub={live ? undefined : copy.sub}
-        label={live ? 'End call' : status === 'connecting' ? 'Connecting…' : TALK_LABEL}
+        label={live ? copy.endCall : status === 'connecting' ? copy.connectingLabel : copy.label}
         live={live}
         onClick={() => (live || status === 'connecting' ? hangUp() : start())}
       />

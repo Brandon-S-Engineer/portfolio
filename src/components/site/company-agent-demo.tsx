@@ -11,9 +11,88 @@ import ReactMarkdown from 'react-markdown'
 import { suggestedQuestions } from '@/lib/agent-demo/data'
 import { SYSTEM_PROMPT, toolSpecs } from '@/lib/agent-demo/specs'
 import { answerRun } from '@/content/recorded-runs'
+import { useLocale } from '@/components/site/locale-context'
 
-// Dos preguntas para probar en vivo: una de inventario (SQL) y una de políticas (RAG).
-const LIVE_QUESTIONS = [suggestedQuestions[1], suggestedQuestions[3]]
+// Dos preguntas para probar en vivo: una de inventario (SQL) y una de políticas
+// (RAG). El agente responde en el idioma de la pregunta.
+const T = {
+  en: {
+    questions: [suggestedQuestions[1], suggestedQuestions[3]],
+    agent: 'Volt Mobile · support agent',
+    recorded: 'recorded run · real output',
+    live: 'live model call · not scripted',
+    reset: 'Reset',
+    thinking: 'Thinking…',
+    lookedUp: 'looked up with',
+    saved: (
+      <>
+        This is a saved run. Now make it answer you, with a <b style={{ color: 'var(--fg)' }}>live model call</b>. Try to make it
+        hallucinate.
+      </>
+    ),
+    model: 'Model',
+    own: 'Or write your own question…',
+    placeholder: 'Ask about an order, a phone or a policy…',
+    message: 'Message the agent',
+    send: 'Send',
+    askLive: 'Ask live',
+    ask: 'Ask',
+    promptTools: 'Prompt & tools',
+    did: 'What the agent did',
+    liveBuild: 'Live build',
+    back: 'Back to trace',
+    view: 'View prompt & tools',
+    system: 'System prompt',
+    schemas: 'Tool schemas sent to the model',
+    empty: 'Tool calls, SQL, sources and cost appear here.',
+    picks: 'The model picks a tool',
+    writes: 'The model writes the answer',
+    searches: 'searches the policies',
+    runsSql: 'runs a fixed SQL query',
+    rows: 'rows',
+    latency: 'latency',
+    tokens: 'tokens',
+    cost: 'cost',
+  },
+  es: {
+    questions: ['¿Qué modelos de iPhone 15 tienen en stock por menos de $15,000 MXN?', '¿La garantía cubre una pantalla estrellada?'],
+    agent: 'Volt Mobile · agente de soporte',
+    recorded: 'corrida grabada · salida real',
+    live: 'llamada real al modelo · sin guion',
+    reset: 'Reiniciar',
+    thinking: 'Pensando…',
+    lookedUp: 'consultó con',
+    saved: (
+      <>
+        Esta es una corrida grabada. Ahora haz que te responda a ti, con una <b style={{ color: 'var(--fg)' }}>llamada real al modelo</b>.
+        Intenta que invente algo.
+      </>
+    ),
+    model: 'Modelo',
+    own: 'O escribe tu propia pregunta…',
+    placeholder: 'Pregunta por un pedido, un teléfono o una política…',
+    message: 'Mensaje al agente',
+    send: 'Enviar',
+    askLive: 'Preguntar en vivo',
+    ask: 'Preguntar',
+    promptTools: 'Prompt y tools',
+    did: 'Lo que hizo el agente',
+    liveBuild: 'En vivo',
+    back: 'Volver a la traza',
+    view: 'Ver prompt y tools',
+    system: 'System prompt',
+    schemas: 'Esquemas de tools que recibe el modelo',
+    empty: 'Aquí aparecen las tools, el SQL, las fuentes y el costo.',
+    picks: 'El modelo elige una tool',
+    writes: 'El modelo escribe la respuesta',
+    searches: 'busca en las políticas',
+    runsSql: 'corre una consulta SQL fija',
+    rows: 'filas',
+    latency: 'latencia',
+    tokens: 'tokens',
+    cost: 'costo',
+  },
+}
 
 // Debe coincidir con MODELS en lib/agent-demo/openai.ts (solo modelos baratos).
 const MODEL_OPTIONS = [
@@ -35,11 +114,12 @@ export type TraceEvent =
 const toolIcon = { search_docs: FileSearch, find_products: Database, get_order: Database } as Record<string, typeof Database>
 
 export default function CompanyAgentDemo() {
+  const t = T[useLocale()]
   // Mientras `recorded` sea true, lo que se ve es la corrida guardada.
   const [recorded, setRecorded] = useState(true)
   const [messages, setMessages] = useState<Msg[]>(answerRun.messages)
   const [trace, setTrace] = useState<TraceEvent[]>(answerRun.trace)
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(t.questions[0])
   const [busy, setBusy] = useState(false)
   const [model, setModel] = useState('gpt-4.1-mini')
   const [streaming, setStreaming] = useState('')
@@ -114,7 +194,7 @@ export default function CompanyAgentDemo() {
         <div className='flex items-center justify-between px-5 py-3' style={{ borderBottom: '1px solid var(--border)' }}>
           <span className='inline-flex items-center gap-2 text-[13.5px] font-medium'>
             <span className='site-pulse h-[7px] w-[7px] rounded-full' style={{ background: 'var(--live)' }} />
-            Volt Mobile · support agent
+            {t.agent}
           </span>
           <span
             className='site-mono hidden rounded-full px-2 py-0.5 text-[11px] font-bold sm:inline'
@@ -123,7 +203,7 @@ export default function CompanyAgentDemo() {
                 ? { background: 'var(--bg-2)', color: 'var(--muted)' }
                 : { background: 'var(--accent-soft)', color: 'var(--accent)' }
             }>
-            {recorded ? 'recorded run · real output' : 'live model call · not scripted'}
+            {recorded ? t.recorded : t.live}
           </span>
           {!recorded && (
             <button
@@ -133,11 +213,11 @@ export default function CompanyAgentDemo() {
                 setRecorded(true)
                 setMessages(answerRun.messages)
                 setTrace(answerRun.trace)
-                setInput('')
+                setInput(t.questions[0])
               }}
               className='inline-flex items-center gap-1 text-[12.5px]'
               style={{ color: 'var(--muted)' }}>
-              <RotateCcw className='h-3.5 w-3.5' /> Reset
+              <RotateCcw className='h-3.5 w-3.5' /> {t.reset}
             </button>
           )}
         </div>
@@ -167,12 +247,12 @@ export default function CompanyAgentDemo() {
           )}
           {busy && !streaming && (
             <div className='inline-flex items-center gap-2 text-[13px]' style={{ color: 'var(--muted)' }}>
-              <Loader2 className='h-3.5 w-3.5 animate-spin' /> Thinking…
+              <Loader2 className='h-3.5 w-3.5 animate-spin' /> {t.thinking}
             </div>
           )}
           {!busy && answer && usedTools.length > 0 && (
             <p className='site-mono inline-flex items-center gap-1.5 text-[11.5px]' style={{ color: 'var(--muted)' }}>
-              <Database className='h-3 w-3' /> looked up with {usedTools.join(' + ')}
+              <Database className='h-3 w-3' /> {t.lookedUp} {usedTools.join(' + ')}
             </p>
           )}
         </div>
@@ -180,11 +260,10 @@ export default function CompanyAgentDemo() {
         {recorded && (
           <div className='px-5 pt-3 pb-1' style={{ borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
             <p className='text-[13.5px]' style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
-              This is a saved run. Now make it answer you, with a <b style={{ color: 'var(--fg)' }}>live model call</b>. Try to make it
-              hallucinate.
+              {t.saved}
             </p>
             <div className='mt-2.5 flex flex-wrap gap-2'>
-              {LIVE_QUESTIONS.map((q) => (
+              {t.questions.map((q) => (
                 <button
                   key={q}
                   type='button'
@@ -214,7 +293,7 @@ export default function CompanyAgentDemo() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             disabled={busy}
-            aria-label='Model'
+            aria-label={t.model}
             className='site-mono h-11 w-full rounded-[12px] px-2.5 text-[12.5px] outline-none focus-visible:ring-2 sm:w-auto'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
             {MODEL_OPTIONS.map((m) => (
@@ -227,17 +306,17 @@ export default function CompanyAgentDemo() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             maxLength={1000}
-            placeholder={recorded ? 'Or write your own question…' : 'Ask about an order, a phone or a policy…'}
-            aria-label='Message the agent'
+            placeholder={recorded ? t.own : t.placeholder}
+            aria-label={t.message}
             className='h-11 min-w-0 flex-1 rounded-[12px] px-3.5 text-[14px] outline-none focus-visible:ring-2'
             style={{ background: 'var(--bg-2)', border: '1px solid var(--border)' }}
           />
           <button
             type='submit'
             disabled={busy || !input.trim()}
-            aria-label='Send'
+            aria-label={t.send}
             className='site-btn site-btn-accent site-cta h-11 shrink-0 justify-center px-4 text-[14.5px] disabled:opacity-50'>
-            {recorded ? 'Ask live' : 'Ask'}
+            {recorded ? t.askLive : t.ask}
             <ArrowUp className='h-[18px] w-[18px]' />
           </button>
         </form>
@@ -248,27 +327,27 @@ export default function CompanyAgentDemo() {
         className='flex h-[520px] min-w-0 flex-col'
         style={{ background: 'var(--bg-2)', borderLeft: '1px solid var(--border)' }}>
         <div className='flex items-center justify-between px-5 py-3' style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className='site-kicker'>{showPrompt ? 'Prompt & tools' : recorded ? 'What the agent did' : 'Live build'}</span>
+          <span className='site-kicker'>{showPrompt ? t.promptTools : recorded ? t.did : t.liveBuild}</span>
           <button
             type='button'
             onClick={() => setShowPrompt((v) => !v)}
             className='inline-flex items-center gap-1 text-[12.5px]'
             style={{ color: 'var(--muted)' }}>
-            <Code2 className='h-3.5 w-3.5' /> {showPrompt ? 'Back to trace' : 'View prompt & tools'}
+            <Code2 className='h-3.5 w-3.5' /> {showPrompt ? t.back : t.view}
           </button>
         </div>
         <div className='flex-1 space-y-2.5 overflow-y-auto px-5 py-4'>
           {showPrompt && (
             <>
-              <p className='site-kicker'>System prompt</p>
+              <p className='site-kicker'>{t.system}</p>
               <Code text={SYSTEM_PROMPT} />
-              <p className='site-kicker pt-2'>Tool schemas sent to the model</p>
+              <p className='site-kicker pt-2'>{t.schemas}</p>
               <Code text={JSON.stringify(toolSpecs, null, 2)} />
             </>
           )}
           {!showPrompt && trace.length === 0 && (
             <p className='text-[13px]' style={{ color: 'var(--muted)', lineHeight: 1.55 }}>
-              Tool calls, SQL, sources and cost appear here.
+              {t.empty}
             </p>
           )}
           {!showPrompt && answer && (
@@ -283,7 +362,7 @@ export default function CompanyAgentDemo() {
                 <Row
                   key={i}
                   icon={Sparkles}
-                  title={trace[i + 1]?.type === 'tool_call' ? 'The model picks a tool' : 'The model writes the answer'}
+                  title={trace[i + 1]?.type === 'tool_call' ? t.picks : t.writes}
                   meta={`${ev.ms} ms · ${ev.input}→${ev.output} tok`}
                 />
               )
@@ -293,7 +372,7 @@ export default function CompanyAgentDemo() {
                   key={i}
                   icon={toolIcon[ev.name] ?? Database}
                   title={ev.name}
-                  note={ev.name === 'search_docs' ? 'searches the policies' : 'runs a fixed SQL query'}
+                  note={ev.name === 'search_docs' ? t.searches : t.runsSql}
                   code={prettyArgs(ev.args)}
                 />
               )
@@ -314,7 +393,7 @@ export default function CompanyAgentDemo() {
                     </ul>
                   ) : null}
                   <p className='site-mono mt-1 text-[11.5px]' style={{ color: 'var(--muted)' }}>
-                    {ev.ms} ms{ev.rows !== undefined ? ` · ${ev.rows} rows` : ''}
+                    {ev.ms} ms{ev.rows !== undefined ? ` · ${ev.rows} ${t.rows}` : ''}
                   </p>
                 </div>
               )
@@ -324,9 +403,9 @@ export default function CompanyAgentDemo() {
                   key={i}
                   className='site-mono mt-3 grid grid-cols-3 gap-2 rounded-[12px] p-3 text-center text-[11.5px]'
                   style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-                  <Stat label='latency' value={`${(ev.ms / 1000).toFixed(1)} s`} />
-                  <Stat label='tokens' value={`${ev.tokens.input + ev.tokens.output}`} />
-                  <Stat label='cost' value={ev.cost_usd !== null ? `$${ev.cost_usd.toFixed(4)}` : 'n/a'} />
+                  <Stat label={t.latency} value={`${(ev.ms / 1000).toFixed(1)} s`} />
+                  <Stat label={t.tokens} value={`${ev.tokens.input + ev.tokens.output}`} />
+                  <Stat label={t.cost} value={ev.cost_usd !== null ? `$${ev.cost_usd.toFixed(4)}` : 'n/a'} />
                 </div>
               )
             return null

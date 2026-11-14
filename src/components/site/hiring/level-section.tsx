@@ -32,7 +32,7 @@ export default function LevelSection({
               </span>
               <span className='site-mono inline-flex items-center gap-1.5 text-[11px]' style={{ color: 'var(--live)' }}>
                 <span className='site-pulse h-1.5 w-1.5 rounded-full' style={{ background: 'var(--live)' }} />
-                live
+                {copy.ladder.live}
               </span>
             </div>
             <h3
