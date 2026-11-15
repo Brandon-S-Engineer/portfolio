@@ -62,6 +62,9 @@ export type DeskResult = {
   margin: number
   daysToSell: number | null
   reasoning: string[]
+  // Vacío cuando no vale la pena escribirle al vendedor (pide demasiado).
   offerMessage: string
   guardrail: string | null
+  // Por qué se descartó: caro o riesgoso. Null si no es PASS.
+  passReason: 'price' | 'risk' | null
 }

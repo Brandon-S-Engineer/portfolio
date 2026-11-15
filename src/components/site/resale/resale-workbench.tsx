@@ -61,6 +61,8 @@ const T = {
     haircut: 'haircut',
     stats: { asking: 'Asking', maxBuy: 'Max buy', resale: 'Resale', margin: 'Margin', sellsIn: 'Sells in' },
     verdict: { BUY: 'BUY', NEGOTIATE: 'NEGOTIATE', PASS: 'PASS' } as Record<string, string>,
+    pass: { price: 'TOO EXPENSIVE', risk: 'TOO RISKY' },
+    notWorth: (pct: number) => `Not worth messaging: they’re asking ${pct}% more than the most you’d pay.`,
     message: 'Message to the seller',
     copy: 'Copy message',
     footer: 'numbers by code, judgment by LLM',
@@ -113,6 +115,8 @@ const T = {
     haircut: 'descuento',
     stats: { asking: 'Pide', maxBuy: 'Máx. compra', resale: 'Reventa', margin: 'Margen', sellsIn: 'Se vende en' },
     verdict: { BUY: 'COMPRAR', NEGOTIATE: 'NEGOCIAR', PASS: 'PASAR' } as Record<string, string>,
+    pass: { price: 'CARO', risk: 'RIESGOSO' },
+    notWorth: (pct: number) => `No vale la pena escribir: pide ${pct}% más de lo máximo que pagarías.`,
     message: 'Mensaje al vendedor',
     copy: 'Copiar mensaje',
     footer: 'números por código, criterio por LLM',
@@ -195,6 +199,8 @@ export default function ResaleWorkbench({ opportunities, locale = 'en' }: { oppo
       }
     } catch (e) {
       setError((e as Error).message)
+      // Ningún paso se queda girando si la corrida se cortó.
+      setSteps((s) => Object.fromEntries(Object.entries(s).filter(([, v]) => v?.status !== 'start')))
     } finally {
       setRunning(false)
     }
@@ -488,7 +494,7 @@ function Verdict({
     <div className='mt-3 rounded-[14px] p-4' style={{ background: 'var(--card)', border: `1.5px solid ${tone}` }}>
       <div className='flex flex-wrap items-baseline justify-between gap-2'>
         <span className='site-display text-[24px] font-bold' style={{ color: tone, letterSpacing: '-0.02em' }}>
-          {t.verdict[r.verdict] ?? r.verdict}
+          {r.verdict === 'PASS' && r.passReason ? t.pass[r.passReason] : (t.verdict[r.verdict] ?? r.verdict)}
         </span>
         <span className='truncate text-[13px] font-medium'>{r.model}</span>
       </div>
@@ -512,10 +518,18 @@ function Verdict({
       )}
       <p className='site-kicker mt-3'>{t.message}</p>
       <div className='mt-1.5 flex items-start gap-2 rounded-[10px] px-3 py-2 text-[13px]' style={{ background: 'var(--bg-2)', lineHeight: 1.5 }}>
-        <span className='flex-1'>{r.offerMessage}</span>
-        <button type='button' onClick={onCopy} aria-label={t.copy} className='shrink-0 p-0.5' style={{ color: 'var(--muted)' }}>
-          {copied ? <Check className='h-4 w-4' style={{ color: 'var(--live)' }} /> : <Clipboard className='h-4 w-4' />}
-        </button>
+        {r.offerMessage ? (
+          <>
+            <span className='flex-1'>{r.offerMessage}</span>
+            <button type='button' onClick={onCopy} aria-label={t.copy} className='shrink-0 p-0.5' style={{ color: 'var(--muted)' }}>
+              {copied ? <Check className='h-4 w-4' style={{ color: 'var(--live)' }} /> : <Clipboard className='h-4 w-4' />}
+            </button>
+          </>
+        ) : (
+          <span className='flex-1' style={{ color: 'var(--muted)' }}>
+            {t.notWorth(Math.round((r.price / Math.max(r.maxBuy, 1) - 1) * 100))}
+          </span>
+        )}
       </div>
       <p className='site-mono mt-2 text-[11px]' style={{ color: 'var(--muted)' }}>
         {f.tokens.toLocaleString('en-US')} tokens · {f.cost != null ? `$${f.cost.toFixed(4)}` : '—'} · {(f.ms / 1000).toFixed(1)}s ·

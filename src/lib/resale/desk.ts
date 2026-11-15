@@ -46,6 +46,7 @@ const TXT = {
     notStated: 'not stated',
     downgraded: (price: string, max: string) => `Lead said BUY but ${price} is above the max buy of ${max} — downgraded to NEGOTIATE.`,
     forcedPass: 'Risk analyst flagged high risk — forced to PASS.',
+    tooExpensive: (price: string, max: string) => `${price} is more than 15% above the max buy of ${max} — too expensive to negotiate.`,
   },
   es: {
     language: 'Spanish',
@@ -62,6 +63,7 @@ const TXT = {
     notStated: 'no se dice',
     downgraded: (price: string, max: string) => `La decisión dijo COMPRAR, pero ${price} supera la compra máxima de ${max}: se bajó a NEGOCIAR.`,
     forcedPass: 'El analista de riesgo marcó riesgo alto: se forzó PASAR.',
+    tooExpensive: (price: string, max: string) => `${price} supera en más de 15% la compra máxima de ${max}: muy caro para negociar.`,
   },
 }
 
@@ -78,6 +80,24 @@ type Listing = {
 }
 
 const round100 = (n: number) => Math.round(n / 100) * 100
+
+// Respaldo del desk para texto pegado a mano ("iphone 12 por 10000"): el parser
+// del CRM exige "$", "mxn" o comas porque lee anuncios con mucho ruido. Aquí se
+// acepta un monto tras "por/a/en/for/at" o, si no, el único número de 4–6
+// cifras. Solo se usa en el desk.
+function pastedPrice(text: string): number | null {
+  const t = text.toLowerCase()
+  const ok = (n: number) => n >= 1000 && n <= 150000
+  const near = t.match(/(?:por|a|en|for|at|price|precio)\s*\$?\s*(\d{1,3}(?:[,.]\d{3})+|\d{4,6})\b/)
+  if (near && ok(Number(near[1].replace(/[,.]/g, '')))) return Number(near[1].replace(/[,.]/g, ''))
+  const bare = [...t.matchAll(/\b(\d{1,3}(?:[,.]\d{3})+|\d{4,6})\b/g)].map((m) => Number(m[1].replace(/[,.]/g, ''))).filter(ok)
+  return bare.length === 1 ? bare[0] : null
+}
+
+// Más arriba de esto sobre la compra máxima no vale la pena escribirle al vendedor.
+const NOT_WORTH_IT = 1.4
+// Hasta aquí sobre la compra máxima todavía se negocia.
+const NEGOTIATE_RANGE = 1.15
 const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
 async function loadListing(input: { listingId?: string; text?: string }, t: (typeof TXT)['en']): Promise<Listing> {
@@ -91,7 +111,7 @@ async function loadListing(input: { listingId?: string; text?: string }, t: (typ
   }
   const text = (input.text ?? '').trim()
   const [title, ...rest] = text.split('\n')
-  const price = parsePriceFromText(text)
+  const price = parsePriceFromText(text) ?? pastedPrice(text)
   if (!price) throw new DeskError(t.needPrice)
   const p = parseListing(title, rest.join('\n') || null)
   if (!p.line || !(MARKET_CATEGORIES as readonly string[]).includes(p.category)) {
@@ -218,6 +238,7 @@ export async function runDesk(input: { listingId?: string; text?: string; lang?:
     const { out, ms, tokens: tk } = await llm('spec', specSchema,
       `You read used-Apple listings from Facebook Marketplace (Mexico, Spanish). Return JSON {ssdGb, condition, notes}.
 ssdGb: the storage ONLY if the text states it explicitly, and only one of ${JSON.stringify(options)}; otherwise null. Never guess.
+"base" (or "básico") means the smallest option, ${Math.min(...options)}.
 condition: short ${L} summary of the condition the text claims (or "${tx.notStated}").
 notes: anything ambiguous, e.g. "venta o cambio" (sale or swap), carrier-locked, missing accessories. ${L}, one sentence.`,
       { title: l.title, description: l.description?.slice(0, 600) ?? null, parsedModel: model })
@@ -247,10 +268,13 @@ summary: 2 short sentences in ${L} citing the numbers.`,
       `You are a fraud and condition risk analyst for used-phone deals on Facebook Marketplace (Mexico).
 Return JSON {risk, flags, haircutPct, summary}.
 Look for: price far below market (bait/scam), iCloud/blocked, reported (IMEI), carrier-locked, swaps ("cambio"), repairs or non-original parts, battery, damage, vague text.
+priceVsMarket says, computed by code, whether the price is below, inside or above the market range. Only "below" can be a bait signal. A price above the market is NOT a risk: it is just expensive, so never flag it.
+Asking for money before you see the device (bank transfer or deposit only, shipping only, no meeting in person) is the classic Marketplace scam: risk high.
 haircutPct: 0–30, how much to lower the max buy price for the risk. flags: up to 4 short ${L} labels. summary: one ${L} sentence.
 Missing description alone is normal on Marketplace, not a red flag.`,
       {
-        title: l.title, description: l.description?.slice(0, 600) ?? null, price: l.price, marketP25: c.p25,
+        title: l.title, description: l.description?.slice(0, 600) ?? null, price: l.price, marketP25: c.p25, marketP75: c.p75,
+        priceVsMarket: l.price < c.p25 ? 'below' : l.price > c.p75 ? 'above' : 'inside',
         discountVsP25: c.discountVsP25, detectedFlags: l.flags, keywordRiskHit: isRiskyListing(l.title, l.description),
       }),
   ])
@@ -272,7 +296,7 @@ reasoning: 1–3 short ${L} bullets with the key numbers.
 offerMessage: the FIRST message you (the buyer) send to the seller about their listing, in ${tx.offerStyle}, max 2 sentences. The seller posted the listing; nobody has made an offer yet.
 - BUY: ask if it's still available and propose meeting in person to check it.
 - NEGOTIATE: ask if it's available and offer exactly offerPrice MXN.
-- PASS because of price: a polite offer of exactly offerPrice MXN, no pressure.
+- PASS because of price: a polite, low-pressure offer of exactly offerPrice MXN.
 - PASS because of risk: no price; ask to meet in person and check the device (iCloud, IMEI, battery) before paying anything.
 Never mention any price other than offerPrice.`,
     { listing: { title: l.title, model, price: l.price }, maxBuy, offerPrice, expectedSale, daysToSell: market.out.daysToSell, market: market.out.summary, risk: risk.out })
@@ -284,11 +308,22 @@ Never mention any price other than offerPrice.`,
     verdict = 'NEGOTIATE'
     guardrail = tx.downgraded(fmt(l.price), fmt(maxBuy))
   }
+  // Negociar solo tiene sentido cerca del máximo; más arriba, está caro.
+  if (verdict !== 'PASS' && l.price > maxBuy * NEGOTIATE_RANGE) {
+    verdict = 'PASS'
+    guardrail = tx.tooExpensive(fmt(l.price), fmt(maxBuy))
+  }
   if (verdict !== 'PASS' && risk.out.risk === 'high') {
     verdict = 'PASS'
     guardrail = tx.forcedPass
   }
-  emit({ type: 'step', id: 'lead', status: 'done', ms: lead.ms, tokens: lead.tokens, output: { ...lead.out, verdict } })
+  // Motivo del PASS, decidido por código: riesgo alto o simplemente caro.
+  const passReason = verdict !== 'PASS' ? null : risk.out.risk === 'high' ? 'risk' : 'price'
+  // Si pide muchísimo más de lo que pagarías, no se escribe nada.
+  let offerMessage = lead.out.offerMessage
+  if (passReason === 'price' && l.price > maxBuy * NOT_WORTH_IT) offerMessage = ''
+
+  emit({ type: 'step', id: 'lead', status: 'done', ms: lead.ms, tokens: lead.tokens, output: { ...lead.out, verdict, offerMessage } })
 
   emit({
     type: 'final',
@@ -298,7 +333,7 @@ Never mention any price other than offerPrice.`,
     result: {
       verdict, title: l.title, model, price: l.price, maxBuy, expectedSale,
       margin: expectedSale - offerPrice,
-      daysToSell: market.out.daysToSell, reasoning: lead.out.reasoning, offerMessage: lead.out.offerMessage, guardrail,
+      daysToSell: market.out.daysToSell, reasoning: lead.out.reasoning, offerMessage, guardrail, passReason,
     },
   })
 }
