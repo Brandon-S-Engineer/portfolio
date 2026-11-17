@@ -11,6 +11,7 @@
     "seed:demos": "tsx --tsconfig scripts/tsconfig.json scripts/seed-demos.ts",
     "scrape": "tsx --tsconfig scripts/tsconfig.json scripts/scraper/index.ts",
     "test:mp-selectors": "tsx scripts/test-mp-selectors.ts",
+    "seed:study": "tsx --env-file=.env --tsconfig scripts/tsconfig.json scripts/seed-study.ts",
     "seed:agent-demo": "tsx --env-file=.env --tsconfig scripts/tsconfig.json scripts/seed-agent-demo.ts"
   },
   "dependencies": {

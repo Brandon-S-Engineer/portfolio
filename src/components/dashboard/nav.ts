@@ -1,6 +1,6 @@
 import {
   Wallet, Search, Smartphone, Tablet, Laptop, Headphones, ShoppingBag, ShieldCheck,
-  Briefcase, Building2, Clapperboard, Users, MapPin, Key, Settings, type LucideIcon,
+  Briefcase, Building2, GraduationCap, Clapperboard, Users, MapPin, Key, Settings, type LucideIcon,
 } from 'lucide-react'
 
 export type NavItem = { href: string; label: string; icon: LucideIcon }
@@ -31,6 +31,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Empleo',
     items: [
       { href: '/dashboard/empleos', label: 'Vacantes', icon: Building2 },
+      { href: '/dashboard/estudio', label: 'Estudio', icon: GraduationCap },
     ],
   },
   {

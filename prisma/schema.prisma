@@ -727,3 +727,23 @@ model TalkCall {
   @@index([createdAt])
   @@index([ipHash, createdAt])
 }
+
+// Progreso de la sección Estudio (guía de entrevistas). Una fila por cosa
+// palomeada o calificada: "lesson:<id>", "card:<id>", "check:<id>", "qa:<id>".
+// `data` guarda lo que haga falta (caja y fecha de repaso, borrador de código).
+model StudyProgress {
+  key       String   @id
+  status    String
+  data      Json?
+  updatedAt DateTime @updatedAt
+}
+
+// Contenido de Estudio: un archivo de texto por unidad (ver lib/estudio/parse).
+// Vive en la base y no en el repo porque son apuntes personales; se carga con
+// `npm run seed:study -- <carpeta>`.
+model StudyUnit {
+  id        String   @id
+  position  Int
+  source    String
+  updatedAt DateTime @updatedAt
+}
