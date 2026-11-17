@@ -9,7 +9,12 @@ import { marginTarget } from '@/lib/electronicos/math'
 import { CATEGORY_META, ConfidenceDot, configShort, downloadFile, matchesSearch, money, moneyK, type Category } from './shared'
 import { Search } from 'lucide-react'
 
-type SortKey = 'n' | 'buy' | 'sell' | 'margin' | 'exit' | 'days'
+type SortKey = 'n' | 'buy' | 'sell' | 'margin' | 'marginVol' | 'exit' | 'days'
+
+/** Margen + volumen: margen × √anuncios. La raíz evita que el volumen aplaste
+ *  al margen (200 anuncios de $500 no le ganan a 30 de $3,000), pero entre dos
+ *  márgenes parecidos gana el que tiene movimiento real. */
+const marginVol = (r: PriceTableRow) => (r.margin == null ? -Infinity : r.margin * Math.sqrt(r.n))
 
 export default function ElecPreciosTable({
   category, rows, windowDays, fastSaleDays, onOpenConfig,
@@ -29,13 +34,14 @@ export default function ElecPreciosTable({
   // muestra (línea+chip agrupa bien aunque falte RAM/SSD). Por eso arranca
   // mostrando todo; "Solo specs completos" es un filtro que el usuario prende.
   const [onlyComplete, setOnlyComplete] = useState(false)
-  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'n', desc: true })
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'marginVol', desc: true })
 
   const val = (r: PriceTableRow, k: SortKey) =>
     k === 'n' ? r.n
       : k === 'buy' ? r.buyPrice ?? -Infinity
         : k === 'sell' ? r.sellPrice ?? -Infinity
           : k === 'margin' ? r.margin ?? -Infinity
+            : k === 'marginVol' ? marginVol(r)
             : k === 'exit' ? r.exitPrice ?? -Infinity
               : r.avgDaysOnMarket ?? Infinity
 
@@ -92,7 +98,8 @@ export default function ElecPreciosTable({
         <strong className='text-foreground'>Compra</strong> = P25 (el 25% más barato; lo consigues contactando rápido) ·{' '}
         <strong className='text-foreground'>Venta</strong> = P75 (la parte alta; la justifican buen estado, caja y batería) ·{' '}
         <strong className='text-foreground'>Margen</strong> = venta − compra, en verde si alcanza la meta por equipo.
-        Comprar abajo del P25 agranda el margen.
+        Comprar abajo del P25 agranda el margen.{' '}
+        <strong className='text-foreground'>Margen + volumen</strong> (orden por default) = margen × √anuncios: arriba quedan los tratos que más dejan y sí tienen movimiento.
       </p>
 
       <div className='rounded-md border overflow-x-auto'>
@@ -103,7 +110,16 @@ export default function ElecPreciosTable({
               {th('Anuncios', 'n', 'Anuncios con precio usable en la ventana — profundidad del mercado')}
               {th('Compra', 'buy', 'P25 de los precios pedidos', 'P25')}
               {th('Venta', 'sell', 'P75 de los precios pedidos', 'P75')}
-              {th('Margen', 'margin', 'Venta − compra por equipo', 'por equipo')}
+              <th
+                title='Clic: Margen + volumen (margen × √anuncios: lo que más deja y sí se mueve) → Margen ↓ → Margen ↑'
+                onClick={() => setSort((s) => s.key === 'marginVol' ? { key: 'margin', desc: true }
+                  : s.key === 'margin' && s.desc ? { key: 'margin', desc: false }
+                    : { key: 'marginVol', desc: true })}
+                className='px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap cursor-pointer select-none'
+              >
+                Margen{sort.key === 'marginVol' ? ' + volumen ↓' : sort.key === 'margin' ? (sort.desc ? ' ↓' : ' ↑') : ''}
+                <div className='text-[11px] font-normal text-muted-foreground/70'>por equipo</div>
+              </th>
               {th('Rango', undefined, 'P10 · mediana · P90', 'P10 · mediana · P90')}
               {th('Salida rápida', 'exit', `Mediana de los que desaparecieron en menos de ${fastSaleDays} días`, `< ${fastSaleDays} días`)}
               {th('Días', 'days', 'Días promedio en el mercado', 'en mercado')}
