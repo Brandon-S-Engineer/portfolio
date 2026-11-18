@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/dashboard/sidebar'
 import TopBar from '@/components/dashboard/topbar'
 import ChatWidget from '@/components/dashboard/chat-widget'
+import ResumeWidget from '@/components/dashboard/resume-widget'
 
 export default function DashboardShell({ user, children }: { user: { name: string; email: string; role: string }; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(() => {
@@ -52,6 +53,7 @@ export default function DashboardShell({ user, children }: { user: { name: strin
         />
         <main className='flex-1 min-w-0 p-1 sm:p-4 md:p-8 max-w-[1400px] w-full mx-auto'>{children}</main>
       </div>
+      {pathname.startsWith('/dashboard/estudio') && <ResumeWidget />}
       <ChatWidget />
     </div>
   )

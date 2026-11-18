@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Check, CircleCheck, Eye, Lightbulb, Mic, Pencil, Play, RotateCcw, Square, Terminal, X } from 'lucide-react'
+import { Check, CircleCheck, Eye, Lightbulb, Mic, Pencil, Play, Plus, RotateCcw, Square, Terminal, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { highlight } from '@/lib/estudio/highlight'
@@ -53,7 +53,7 @@ export function FlipCard({ card, onRated, big }: { card: Card; onRated?: (knew: 
       </button>
       {open && (
         <div className='mt-3 flex gap-2'>
-          <Button size='sm' variant='outline' className='flex-1 border-orange-500/50 text-orange-700 dark:text-orange-300' onClick={() => answer(false)}><X className='h-3.5 w-3.5' />No la sabía</Button>
+          <Button size='sm' variant='outline' className='flex-1 border-orange-500/50 text-orange-700 dark:text-orange-300' onClick={() => answer(false)}><Plus className='h-3.5 w-3.5' />Agregar</Button>
           <Button size='sm' variant='outline' className='flex-1 border-green-500/50 text-green-700 dark:text-green-300' onClick={() => answer(true)}><Check className='h-3.5 w-3.5' />La sabía</Button>
         </div>
       )}
