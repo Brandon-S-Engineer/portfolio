@@ -4,7 +4,8 @@
 //
 // Filtro #1: los años de experiencia que piden.
 //   sin mínimo o ≤2 → aplicar · 3–4 → estirar (aplica si el resto encaja) · ≥5 → descartar
-// Después: nivel en el título, qué tanto coincide el stack, ubicación y título.
+// Después: nivel en el título, qué tanto coincide el stack (y qué piden que no
+// usas), ubicación y título.
 // Sin descripción (solo la tarjeta de la lista) queda PENDIENTE.
 
 export type RawPosting = {
@@ -86,6 +87,51 @@ const WEB_STACK: [RegExp, string][] = [
   [/\baws\b/, 'AWS'],
   [/api rest|rest api|restful|\bapis?\b/, 'APIs'],
 ]
+// Señales débiles: casi toda vacante de software las menciona, así que solas
+// no prueban que el puesto sea de tu stack.
+const WEAK = new Set(['APIs', 'SQL/Postgres', 'AWS', 'Docker', 'JavaScript'])
+
+// Tecnologías que Brandon NO usa. Si la descripción las pide (no como
+// "deseable" ni como alternativa a algo que sí usa), es un hueco real.
+const MISSING_STACK: [RegExp, string][] = [
+  [/\bjava\b(?!\s*script)|spring ?boot|\bspring\b/, 'Java'],
+  [/\.net\b|\bc#|asp\.net/, '.NET/C#'],
+  [/\bphp\b|laravel/, 'PHP'],
+  [/angular/, 'Angular'],
+  [/\bvue(\.?js)?\b|nuxt/, 'Vue'],
+  [/golang|\bgo (developer|lang|engineer)\b|\(go\)|\bgo,/, 'Go'],
+  [/ruby on rails|\bruby\b|\brails\b(?! ?guard)/, 'Ruby/Rails'],
+  [/kotlin|\bswift\b|flutter|react native|\bandroid\b|\bios\b/, 'móvil nativo'],
+  [/\bazure\b/, 'Azure'],
+  [/\bgcp\b|google cloud/, 'GCP'],
+  [/kubernetes|\bk8s\b/, 'Kubernetes'],
+  [/terraform/, 'Terraform'],
+  [/salesforce|\bapex\b/, 'Salesforce'],
+  [/\bsap\b|\babap\b/, 'SAP'],
+  [/\bscala\b|spark|databricks/, 'Spark/Scala'],
+  [/c\+\+|\brust\b/, 'C++/Rust'],
+]
+// En la misma línea que la tecnología: es opcional, o se acepta otra que sí usas.
+const OPTIONAL = /deseable|nice to have|plus\b|preferred|preferid|bonus|ideal(ly|mente)?|valoramos|se valora|is a plus|un plus|familiarity|familiaridad|exposure|conocimiento basico|nociones/
+const ALTERNATIVE = /\b(or|o|u)\b|\/|similar|equivalent|equivalente/
+const MINE_IN_LINE = /aws|python|typescript|javascript|react|next|node|postgres|fastapi|openai|langchain|langgraph/
+
+/** Tecnologías que tú no usas y que la vacante pide en serio. */
+function missingStack(body: string): string[] {
+  const lines = body.split(/\n|•|·|;|(?<=\.)\s/)
+  const out = new Set<string>()
+  for (const [re, name] of MISSING_STACK) {
+    for (const line of lines) {
+      if (!re.test(line)) continue
+      if (OPTIONAL.test(line)) continue
+      if (ALTERNATIVE.test(line) && MINE_IN_LINE.test(line.replace(re, ''))) continue
+      out.add(name)
+      break
+    }
+  }
+  return [...out]
+}
+
 // Si el TÍTULO gira alrededor de esto, el puesto es de otro stack.
 const OTHER_STACK = /\bjava\b|\.net\b|\bc#|\bphp\b|\bsap\b|salesforce|cobol|android|\bios\b|swift|kotlin|golang|\bruby\b|angular|\babap\b|mainframe|power ?bi|servicenow|dynamics|oracle|wordpress|\bqa\b|tester|devops|\bsre\b|soporte|help ?desk|data analyst|analista de datos/
 const DEV_TITLE = /develop|desarroll|engineer|ingenier|programad|software|full[- ]?stack|front[- ]?end|back[- ]?end|\bai\b|\bia\b|\bml\b|machine learning|automatiza|automation/
@@ -123,8 +169,11 @@ export function scorePosting(p: RawPosting, ctx: PostingContext = {}): PostingSc
   // 3) Stack
   const ai = AI_STACK.filter(([re]) => re.test(all)).map(([, n]) => n)
   const web = WEB_STACK.filter(([re]) => re.test(all)).map(([, n]) => n)
-  const stackPts = Math.min(3.5, ai.length * 0.75 + web.length * 0.4)
+  const strongWeb = web.filter((n) => !WEAK.has(n))
+  const stackPts = Math.min(3.5, ai.length * 0.75 + strongWeb.length * 0.4 + (web.length - strongWeb.length) * 0.15)
   if (ai.length + web.length) add(Math.round(stackPts * 10) / 10, `Coincide con tu stack: ${[...ai, ...web].slice(0, 8).join(', ')}`)
+  const missing = hasDescription ? missingStack(body) : []
+  if (missing.length) add(-Math.min(3, missing.length * 0.75), `Piden lo que no usas: ${missing.join(', ')}`)
   if (AI_TITLE.test(title)) add(1, 'El puesto es de IA o automatización')
   const otherStack = OTHER_STACK.test(title)
   if (otherStack) add(-3, 'El título es de otro stack o de otra área')
@@ -151,16 +200,21 @@ export function scorePosting(p: RawPosting, ctx: PostingContext = {}): PostingSc
   // vacante "perfecta" de una empresa que publica en masa no siga viéndose perfecta.
   const sum = (rs: Reason[]) => rs.reduce((t, r) => t + r.pts, 0)
   const clamp = (n: number) => Math.max(0, Math.min(10, Math.round(n * 10) / 10))
+  // Lo bueno se topa en 10 ANTES de restar lo malo: si no, una vacante con
+  // muchas coincidencias se comía las penalizaciones (senior, años, stack
+  // ajeno) y seguía en 10.
   const spamFrom = reasons.findIndex((r) => r.tag || r.why.startsWith('Republicada'))
   const fit = spamFrom < 0 ? reasons : reasons.slice(0, spamFrom)
-  const score = clamp(clamp(5 + sum(fit)) + sum(spamFrom < 0 ? [] : reasons.slice(spamFrom)))
+  const fitScore = clamp(Math.min(10, 5 + sum(fit.filter((r) => r.pts > 0))) + sum(fit.filter((r) => r.pts < 0)))
+  const score = clamp(fitScore + sum(spamFrom < 0 ? [] : reasons.slice(spamFrom)))
 
   let verdict: Verdict
-  const noFit = ai.length + web.length === 0
+  // Solo señales débiles (APIs, SQL, AWS…) no cuentan como coincidir con tu stack.
+  const noFit = ai.length + strongWeb.length === 0
   if (ctx.muted || ctx.repost === 'APLICADA' || (otherStack && ai.length === 0)) verdict = 'DESCARTAR'
   else if (!hasDescription) verdict = 'PENDIENTE'
   else if ((expYears ?? 0) >= 5 || noFit || score < 4) verdict = 'DESCARTAR'
-  else if ((expYears ?? 0) >= 3 || senior || score < 6.5) verdict = 'ESTIRAR'
+  else if ((expYears ?? 0) >= 3 || senior || missing.length >= 2 || score < 6.5) verdict = 'ESTIRAR'
   else verdict = 'APLICAR'
   // Una empresa que publica en masa nunca sale en verde: que no robe atención.
   if (mass && verdict === 'APLICAR') verdict = 'ESTIRAR'
