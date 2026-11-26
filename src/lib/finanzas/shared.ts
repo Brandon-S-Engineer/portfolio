@@ -20,8 +20,8 @@ export const CATEGORY_SUGGESTIONS: Record<Area, Record<Kind, string[]>> = {
     EGRESO: ['Comisión Upwork / Connects', 'Herramientas / suscripciones', 'Hosting / APIs', 'Otro'],
   },
   OTRO: {
-    INGRESO: ['Otro'],
-    EGRESO: ['Renta', 'Servicios', 'Otro'],
+    INGRESO: ['Cuentas', 'Otro'],
+    EGRESO: ['Cuentas', 'Renta', 'Servicios', 'Otro'],
   },
 }
 

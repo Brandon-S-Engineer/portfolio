@@ -34,16 +34,19 @@ function EntryDialog({ draft, onClose, onSaved }: { draft: Draft | null; onClose
   const set = (p: Partial<Draft>) => setF((x) => (x ? { ...x, ...p } : x))
   const amount = Number(f.amount)
   const fx = Number(f.fxRate)
+  // Solo "Otro" lleva categoría propia; en Reventa/Software el área ya es la categoría.
+  const free = f.area === 'OTRO'
+  const category = free ? f.category.trim() : AREA_LABEL[f.area]
 
   const save = async () => {
-    if (!f.category.trim() || !(amount > 0) || (f.currency === 'USD' && !(fx > 0))) { toast.error('Categoría, monto y tipo de cambio son requeridos'); return }
+    if (!category || !(amount > 0) || (f.currency === 'USD' && !(fx > 0))) { toast.error('Categoría, monto y tipo de cambio son requeridos'); return }
     setSaving(true)
     try {
       if (f.currency === 'USD') { try { window.localStorage.setItem(FX_KEY, f.fxRate) } catch { /* modo privado */ } }
       const res = await fetch(f.id ? `/api/finanzas/entries/${f.id}` : '/api/finanzas/entries', {
         method: f.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: f.date, kind: f.kind, area: f.area, category: f.category.trim(), amount, currency: f.currency, fxRate: f.currency === 'USD' ? fx : 1, note: f.note || null }),
+        body: JSON.stringify({ date: f.date, kind: f.kind, area: f.area, category, amount, currency: f.currency, fxRate: f.currency === 'USD' ? fx : 1, note: f.note || null }),
       })
       if (!res.ok) throw new Error()
       onSaved(await res.json())
@@ -80,10 +83,10 @@ function EntryDialog({ draft, onClose, onSaved }: { draft: Draft | null; onClose
           </div>
           <div className='space-y-1.5 col-span-2'>
             <Label>Categoría</Label>
-            <Input list='fin-categorias' value={f.category} onChange={(e) => set({ category: e.target.value })} placeholder='Escribe o elige' />
-            <datalist id='fin-categorias'>
-              {CATEGORY_SUGGESTIONS[f.area][f.kind].map((c) => <option key={c} value={c} />)}
-            </datalist>
+            <Input list='fin-categorias' value={free ? f.category : category} onChange={(e) => set({ category: e.target.value })} disabled={!free} placeholder={free ? 'Escribe o elige (ej. Cuentas)' : ''} />
+            {free && <datalist id='fin-categorias'>
+              {CATEGORY_SUGGESTIONS.OTRO[f.kind].map((c) => <option key={c} value={c} />)}
+            </datalist>}
           </div>
           <div className='space-y-1.5'>
             <Label>Monto</Label>
