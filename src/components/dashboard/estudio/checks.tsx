@@ -33,6 +33,16 @@ function Task({ icon, label, done, children }: { icon: ReactNode; label: string;
 }
 
 // ── Tarjetas de repaso ──────────────────────────────────────────────────────
+// Pista para recordar: la respuesta con sus palabras clave (las **negritas**)
+// tapadas, dejando solo la primera letra: "The model is n____________".
+// Sin negritas, se tapan todas las palabras.
+const mask = (t: string) => t.replace(/[\p{L}\p{N}]+/gu, (w) => w[0] + '_'.repeat(w.length - 1))
+export function hintOf(a: string): string {
+  const plain = a.replace(/`([^`]*)`/g, '$1').replace(/==/g, '')
+  const out = /\*\*[^*]+\*\*/.test(plain) ? plain.replace(/\*\*([^*]+)\*\*/g, (_, k: string) => mask(k)) : mask(plain)
+  return out.replace(/\*/g, '')
+}
+
 export function FlipCard({ card, onRated, big }: { card: Card; onRated?: (knew: boolean) => void; big?: boolean }) {
   const row = useStudy((s) => s.rows[`card:${card.id}`])
   const set = useStudy((s) => s.set)
@@ -49,7 +59,7 @@ export function FlipCard({ card, onRated, big }: { card: Card; onRated?: (knew: 
         <div className={cn('font-medium leading-snug', big ? 'text-xl' : 'text-sm')}><Rich text={card.q} /></div>
         {open
           ? <div className={cn('mt-3 border-t pt-3 text-muted-foreground', big ? 'text-base' : 'text-sm')}><Rich text={card.a} /></div>
-          : <div className='mt-2 text-xs text-muted-foreground'>Responde en tu cabeza y toca para ver</div>}
+          : <div className={cn('mt-2 font-mono tracking-wide text-muted-foreground', big ? 'text-sm' : 'text-xs')}>{hintOf(card.a)}</div>}
       </button>
       {open && (
         <div className='mt-3 flex gap-2'>
